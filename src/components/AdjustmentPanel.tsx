@@ -32,6 +32,7 @@ export default function AdjustmentPanel({ accounts, adjustments, baselineResult 
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? '')
   const [date, setDate] = useState(today)
   const [balance, setBalance] = useState('')
+  const [filterAccountId, setFilterAccountId] = useState<string>('')
 
   function handleAdd(e: FormEvent) {
     e.preventDefault()
@@ -88,7 +89,19 @@ export default function AdjustmentPanel({ accounts, adjustments, baselineResult 
       {adjustments.length === 0 ? (
         <p style={styles.empty}>No adjustments recorded.</p>
       ) : (
-        <table style={styles.table}>
+        <>
+          <div style={styles.filterRow}>
+            <label style={styles.filterLabel}>
+              Filter by account:{' '}
+              <select value={filterAccountId} onChange={e => setFilterAccountId(e.target.value)}>
+                <option value="">Show all</option>
+                {accounts.map(a => (
+                  <option key={a.id} value={a.id}>{a.name}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <table style={styles.table}>
           <thead>
             <tr>
               <th>Account</th>
@@ -101,6 +114,7 @@ export default function AdjustmentPanel({ accounts, adjustments, baselineResult 
           </thead>
           <tbody>
             {[...adjustments]
+              .filter(adj => !filterAccountId || adj.accountId === filterAccountId)
               .sort((a, b) => b.date.localeCompare(a.date))
               .map(adj => {
                 const projected = variance(baselineResult, adj.accountId, adj.date)
@@ -138,6 +152,7 @@ export default function AdjustmentPanel({ accounts, adjustments, baselineResult 
               })}
           </tbody>
         </table>
+        </>
       )}
     </div>
   )
@@ -189,5 +204,7 @@ const styles = {
     color: '#dc2626',
     fontSize: '0.8rem',
   },
+  filterRow: { marginBottom: '0.75rem' },
+  filterLabel: { fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' },
   empty: { color: '#9ca3af', fontSize: '0.85rem' },
 }

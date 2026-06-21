@@ -85,8 +85,6 @@ describe('project — Schedule frequencies', () => {
     expect(feb11.balance - feb10.balance).toBe(0)
   })
 
-  // biweekly: every 14 days from startDate = 26 occurrences in a full year
-  // From Jan 5 to Dec 31 2024 (leap): 26 biweekly firings
   it('biweekly schedule produces 26 occurrences in a full year', () => {
     const schedule: Schedule = {
       id: 's1',
@@ -105,7 +103,6 @@ describe('project — Schedule frequencies', () => {
     expect(last.balance).toBe(1000 + 26 * 100)
   })
 
-  // semi-monthly: fires on startDate's day-of-month and day+15, 24 times/year
   it('semi-monthly schedule produces 24 occurrences in a full year', () => {
     const schedule: Schedule = {
       id: 's1',
@@ -124,7 +121,6 @@ describe('project — Schedule frequencies', () => {
     expect(last.balance).toBe(1000 + 24 * 100)
   })
 
-  // weekly: fires every 7 days — spot-check 4 firings over 4 weeks
   it('weekly schedule fires every 7 days', () => {
     const schedule: Schedule = {
       id: 's1',
@@ -241,7 +237,7 @@ describe('project — Rate compounding', () => {
     expect(last.balance).toBeCloseTo(expected, 0)
   })
 
-  it('a negative rate compounds the debt daily (credit card interest)', () => {
+  it('a positive rate on a negative balance compounds the debt daily (credit card interest)', () => {
     const card: Account = {
       id: 'card',
       name: 'Credit Card',
@@ -249,7 +245,7 @@ describe('project — Rate compounding', () => {
       owner: 'Sean',
       seedBalance: -2000,
       seedDate: '2024-01-01',
-      rate: -0.24,
+      rate: 0.24,
       amortizing: false,
     }
     const result = project({
@@ -263,6 +259,29 @@ describe('project — Rate compounding', () => {
     const last = result['card']!.at(-1)!
     // balance should become more negative (owe more)
     expect(last.balance).toBeLessThan(-2000)
+  })
+
+  it('a positive-balance account with a negative rate shrinks over time', () => {
+    const savings: Account = {
+      id: 'savings',
+      name: 'Savings',
+      type: 'savings',
+      owner: 'Sean',
+      seedBalance: 1000,
+      seedDate: '2024-01-01',
+      rate: -0.05,
+      amortizing: false,
+    }
+    const result = project({
+      accounts: [savings],
+      externalParties: [],
+      schedules: [],
+      adjustments: [],
+      startDate: '2024-01-01',
+      endDate: '2024-12-31',
+    })
+    const last = result['savings']!.at(-1)!
+    expect(last.balance).toBeLessThan(1000)
   })
 })
 
@@ -305,6 +324,31 @@ describe('project — amortizing account termination', () => {
 })
 
 describe('project — Adjustments', () => {
+  it('uses the most recent pre-startDate adjustment as the opening balance', () => {
+    const schedule: Schedule = {
+      id: 's1',
+      sourceId: 'external',
+      destinationId: 'checking',
+      amount: 100,
+      estimated: false,
+      frequency: 'monthly',
+      startDate: '2024-02-01',
+      terminateAtZero: false,
+    }
+    const result = project({
+      accounts: [checking],
+      externalParties: [],
+      schedules: [schedule],
+      adjustments: [{ id: 'a1', accountId: 'checking', date: '2024-01-10', actualBalance: 2500 }],
+      startDate: '2024-01-15',
+      endDate: '2024-03-31',
+    })
+    const series = result['checking']!
+    expect(series[0]!.balance).toBe(2500)
+    const mar31 = series.find(p => p.date === '2024-03-31')!
+    expect(mar31.balance).toBe(2500 + 2 * 100)
+  })
+
   it('reseeds account balance from the most recent adjustment on its date', () => {
     const schedule: Schedule = {
       id: 's1',

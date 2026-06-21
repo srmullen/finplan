@@ -78,7 +78,7 @@ export default function ProjectionView() {
 
   const result = useMemo(
     () => (state.accounts.length === 0 ? {} : project(baseInput)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- baseInput is an object literal rebuilt every render; listing it would cause an infinite loop
     [state, startDate, endDate],
   )
 
@@ -87,7 +87,7 @@ export default function ProjectionView() {
       state.accounts.length === 0
         ? {}
         : project({ ...baseInput, adjustments: [] }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- baseInput is an object literal rebuilt every render; listing it would cause an infinite loop
     [state.accounts, state.externalParties, state.schedules, startDate, endDate],
   )
 
@@ -99,7 +99,7 @@ export default function ProjectionView() {
       out[sc.id] = project({ ...baseInput, scenario: sc })
     }
     return out
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- baseInput is an object literal rebuilt every render; listing it would cause an infinite loop
   }, [state, activeScenarioIds, startDate, endDate])
 
   const visibleAccounts = state.accounts.filter(a => !hiddenIds.has(a.id))

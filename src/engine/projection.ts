@@ -7,8 +7,6 @@ import type {
   Adjustment,
 } from './types'
 
-// --- Date utilities (all UTC to avoid DST shifts) ---
-
 function parseDate(s: string): Date {
   const [y, m, d] = s.split('-').map(Number) as [number, number, number]
   return new Date(Date.UTC(y, m - 1, d))
@@ -33,8 +31,6 @@ function daysInMonth(year: number, month: number): number {
   // month is 1-indexed; Date.UTC(year, month, 0) = last day of month
   return new Date(Date.UTC(year, month, 0)).getUTCDate()
 }
-
-// --- Schedule firing ---
 
 function scheduleFiresOn(schedule: Schedule, date: Date): boolean {
   const start = parseDate(schedule.startDate)
@@ -86,8 +82,6 @@ function scheduleFiresOn(schedule: Schedule, date: Date): boolean {
   }
 }
 
-// --- Scenario resolution ---
-
 function resolveSchedules(baseSchedules: Schedule[], scenario: Scenario | undefined): Schedule[] {
   if (!scenario) return baseSchedules
 
@@ -112,8 +106,6 @@ function resolveSchedules(baseSchedules: Schedule[], scenario: Scenario | undefi
   return [...resolved, ...additionalSchedules]
 }
 
-// --- Projection engine ---
-
 export function project(input: ProjectionInput): ProjectionResult {
   const { accounts, schedules, adjustments, scenario, startDate, endDate } = input
 
@@ -134,8 +126,15 @@ export function project(input: ProjectionInput): ProjectionResult {
   const accountIdSet = new Set(allAccounts.map(a => a.id))
   const accountById = new Map(allAccounts.map(a => [a.id, a]))
 
-  // Running balances
-  const balances = new Map<string, number>(allAccounts.map(a => [a.id, a.seedBalance]))
+  const balances = new Map<string, number>(
+    allAccounts.map(a => {
+      const adjs = adjByAccount.get(a.id) ?? []
+      const latest = adjs
+        .filter(adj => adj.date <= startDate)
+        .sort((x, y) => y.date.localeCompare(x.date))[0]
+      return [a.id, latest ? latest.actualBalance : a.seedBalance]
+    }),
+  )
 
   const result: ProjectionResult = Object.fromEntries(allAccounts.map(a => [a.id, []]))
 
@@ -147,7 +146,6 @@ export function project(input: ProjectionInput): ProjectionResult {
     const dateStr = formatDate(current)
     const isFirstDay = current.getTime() === start.getTime()
 
-    // Step 1 & 2: adjustment or compounding per account
     for (const account of allAccounts) {
       let balance = balances.get(account.id)!
       const adjs = adjByAccount.get(account.id) ?? []
@@ -156,15 +154,12 @@ export function project(input: ProjectionInput): ProjectionResult {
       if (adj) {
         balance = adj.actualBalance
       } else if (!isFirstDay && account.rate !== 0) {
-        // Apply rate to the magnitude of the balance so negative balances
-        // (liabilities) compound in the negative direction
-        balance = balance * (1 + Math.abs(account.rate) / 365)
+        balance = balance * (1 + account.rate / 365)
       }
 
       balances.set(account.id, balance)
     }
 
-    // Step 3: transfers
     for (const schedule of resolvedSchedules) {
       if (!scheduleFiresOn(schedule, current)) continue
 
@@ -188,7 +183,6 @@ export function project(input: ProjectionInput): ProjectionResult {
       }
     }
 
-    // Record
     for (const account of allAccounts) {
       result[account.id]!.push({ date: dateStr, balance: balances.get(account.id)! })
     }
