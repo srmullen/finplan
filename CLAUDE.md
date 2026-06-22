@@ -2,7 +2,7 @@
 
 ### Issue tracker
 
-Issues live as local markdown files under `.scratch/` — no GitHub remote needed. See `docs/agents/issue-tracker.md`.
+Issues live in GitHub Issues (srmullen/finplan). Use the `gh` CLI; no external PRs as triage surface. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
