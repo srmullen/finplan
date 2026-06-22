@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: closed
 
 # Project scaffold + Projection engine
 
