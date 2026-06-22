@@ -1,11 +1,11 @@
 import { useState, type FormEvent } from 'react'
-import type { Schedule, Frequency } from '../engine/types'
-import type { AppState } from '../storage/store'
-import { generateId } from '../storage/store'
+import type { Schedule, Frequency, Account, ExternalParty } from '../engine/types'
+import { generateId } from '../utils/id'
 
 interface Props {
   initial?: Schedule
-  state: AppState
+  accounts: Account[]
+  externalParties: ExternalParty[]
   onSave: (schedule: Schedule) => void
   onCancel: () => void
 }
@@ -20,12 +20,12 @@ const FREQUENCIES: Frequency[] = [
   'annually',
 ]
 
-export default function ScheduleForm({ initial, state, onSave, onCancel }: Props) {
+export default function ScheduleForm({ initial, accounts, externalParties, onSave, onCancel }: Props) {
   const today = new Date().toISOString().slice(0, 10)
 
   const allNodes = [
-    ...state.accounts.map(a => ({ id: a.id, label: `${a.name} (${a.owner})`, isAmortizing: a.amortizing })),
-    ...state.externalParties.map(p => ({ id: p.id, label: p.name, isAmortizing: false })),
+    ...accounts.map(a => ({ id: a.id, label: `${a.name} (${a.owner})`, isAmortizing: a.amortizing })),
+    ...externalParties.map(p => ({ id: p.id, label: p.name, isAmortizing: false })),
   ]
 
   const firstNodeId = allNodes[0]?.id ?? ''

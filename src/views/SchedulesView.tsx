@@ -1,38 +1,42 @@
 import { useState } from 'react'
 import type { Schedule } from '../engine/types'
-import { useApp } from '../storage/AppContext'
+import { useSchedules } from '../hooks/useSchedules'
+import { useAccounts } from '../hooks/useAccounts'
+import { useExternalParties } from '../hooks/useExternalParties'
 import ScheduleForm from '../components/ScheduleForm'
 
 export default function SchedulesView() {
-  const { state, dispatch } = useApp()
+  const { schedules, addSchedule, updateSchedule, deleteSchedule } = useSchedules()
+  const { accounts } = useAccounts()
+  const { externalParties } = useExternalParties()
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Schedule | null>(null)
 
   const nodeLabel = (id: string) => {
-    const account = state.accounts.find(a => a.id === id)
+    const account = accounts.find(a => a.id === id)
     if (account) return `${account.name} (${account.owner})`
-    const party = state.externalParties.find(p => p.id === id)
+    const party = externalParties.find(p => p.id === id)
     if (party) return party.name
     return id
   }
 
   function saveSchedule(schedule: Schedule) {
     if (editing) {
-      dispatch({ type: 'UPDATE_SCHEDULE', schedule })
+      void updateSchedule(schedule)
       setEditing(null)
     } else {
-      dispatch({ type: 'ADD_SCHEDULE', schedule })
+      void addSchedule(schedule)
       setShowForm(false)
     }
   }
 
-  function deleteSchedule(id: string) {
+  function handleDeleteSchedule(id: string) {
     if (confirm('Delete this schedule?')) {
-      dispatch({ type: 'DELETE_SCHEDULE', id })
+      void deleteSchedule(id)
     }
   }
 
-  const noNodes = state.accounts.length + state.externalParties.length < 2
+  const noNodes = accounts.length + externalParties.length < 2
 
   return (
     <div>
@@ -41,7 +45,8 @@ export default function SchedulesView() {
       {(showForm || editing) && (
         <ScheduleForm
           initial={editing ?? undefined}
-          state={state}
+          accounts={accounts}
+          externalParties={externalParties}
           onSave={saveSchedule}
           onCancel={() => {
             setShowForm(false)
@@ -67,7 +72,7 @@ export default function SchedulesView() {
         </p>
       )}
 
-      {state.schedules.length === 0 ? (
+      {schedules.length === 0 ? (
         <p style={styles.empty}>No schedules yet.</p>
       ) : (
         <table style={styles.table}>
@@ -83,7 +88,7 @@ export default function SchedulesView() {
             </tr>
           </thead>
           <tbody>
-            {state.schedules.map(s => (
+            {schedules.map(s => (
               <tr key={s.id}>
                 <td>{nodeLabel(s.sourceId)}</td>
                 <td style={{ fontVariantNumeric: 'tabular-nums' }}>
@@ -103,7 +108,7 @@ export default function SchedulesView() {
                   >
                     Edit
                   </button>
-                  <button style={styles.deleteBtn} onClick={() => deleteSchedule(s.id)}>
+                  <button style={styles.deleteBtn} onClick={() => handleDeleteSchedule(s.id)}>
                     Delete
                   </button>
                 </td>
