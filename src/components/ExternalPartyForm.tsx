@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import type { ExternalParty } from '../engine/types'
-import { generateId } from '../storage/store'
+import { generateId } from '../utils/id'
 
 interface Props {
   initial?: ExternalParty

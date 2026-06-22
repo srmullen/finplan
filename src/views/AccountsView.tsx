@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Account, ExternalParty, Owner } from '../engine/types'
-import { useApp } from '../storage/AppContext'
+import { useAccounts } from '../hooks/useAccounts'
+import { useExternalParties } from '../hooks/useExternalParties'
 import AccountForm from '../components/AccountForm'
 import ExternalPartyForm from '../components/ExternalPartyForm'
 
@@ -15,7 +16,8 @@ function formatBalance(n: number) {
 }
 
 export default function AccountsView() {
-  const { state, dispatch } = useApp()
+  const { accounts, addAccount, updateAccount, deleteAccount } = useAccounts()
+  const { externalParties, addParty, updateParty, deleteParty } = useExternalParties()
   const [showAccountForm, setShowAccountForm] = useState(false)
   const [editingAccount, setEditingAccount] = useState<Account | null>(null)
   const [showPartyForm, setShowPartyForm] = useState(false)
@@ -23,39 +25,39 @@ export default function AccountsView() {
 
   function saveAccount(account: Account) {
     if (editingAccount) {
-      dispatch({ type: 'UPDATE_ACCOUNT', account })
+      void updateAccount(account)
       setEditingAccount(null)
     } else {
-      dispatch({ type: 'ADD_ACCOUNT', account })
+      void addAccount(account)
       setShowAccountForm(false)
     }
   }
 
-  function deleteAccount(id: string) {
+  function handleDeleteAccount(id: string) {
     if (confirm('Delete this account?')) {
-      dispatch({ type: 'DELETE_ACCOUNT', id })
+      void deleteAccount(id)
     }
   }
 
   function saveParty(party: ExternalParty) {
     if (editingParty) {
-      dispatch({ type: 'UPDATE_PARTY', party })
+      void updateParty(party)
       setEditingParty(null)
     } else {
-      dispatch({ type: 'ADD_PARTY', party })
+      void addParty(party)
       setShowPartyForm(false)
     }
   }
 
-  function deleteParty(id: string) {
+  function handleDeleteParty(id: string) {
     if (confirm('Delete this external party?')) {
-      dispatch({ type: 'DELETE_PARTY', id })
+      void deleteParty(id)
     }
   }
 
   const accountsByOwner = OWNERS.map(owner => ({
     owner,
-    accounts: state.accounts.filter(a => a.owner === owner),
+    accounts: accounts.filter(a => a.owner === owner),
   })).filter(g => g.accounts.length > 0)
 
   return (
@@ -79,10 +81,10 @@ export default function AccountsView() {
         </button>
       )}
 
-      {state.accounts.length === 0 ? (
+      {accounts.length === 0 ? (
         <p style={styles.empty}>No accounts yet. Add one above.</p>
       ) : (
-        accountsByOwner.map(({ owner, accounts }) => (
+        accountsByOwner.map(({ owner, accounts: ownerAccounts }) => (
           <div key={owner} style={styles.group}>
             <h2>{owner}</h2>
             <table style={styles.table}>
@@ -98,7 +100,7 @@ export default function AccountsView() {
                 </tr>
               </thead>
               <tbody>
-                {accounts.map(a => (
+                {ownerAccounts.map(a => (
                   <tr key={a.id}>
                     <td>{a.name}</td>
                     <td>{a.type.replace('_', ' ')}</td>
@@ -124,7 +126,7 @@ export default function AccountsView() {
                       >
                         Edit
                       </button>
-                      <button style={styles.deleteBtn} onClick={() => deleteAccount(a.id)}>
+                      <button style={styles.deleteBtn} onClick={() => handleDeleteAccount(a.id)}>
                         Delete
                       </button>
                     </td>
@@ -157,7 +159,7 @@ export default function AccountsView() {
         </button>
       )}
 
-      {state.externalParties.length === 0 ? (
+      {externalParties.length === 0 ? (
         <p style={styles.empty}>No external parties yet.</p>
       ) : (
         <table style={styles.table}>
@@ -168,7 +170,7 @@ export default function AccountsView() {
             </tr>
           </thead>
           <tbody>
-            {state.externalParties.map(p => (
+            {externalParties.map(p => (
               <tr key={p.id}>
                 <td>{p.name}</td>
                 <td style={styles.actions}>
@@ -181,7 +183,7 @@ export default function AccountsView() {
                   >
                     Edit
                   </button>
-                  <button style={styles.deleteBtn} onClick={() => deleteParty(p.id)}>
+                  <button style={styles.deleteBtn} onClick={() => handleDeleteParty(p.id)}>
                     Delete
                   </button>
                 </td>

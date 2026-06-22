@@ -1,12 +1,10 @@
 import { useState, type FormEvent } from 'react'
-import type { Account, Adjustment } from '../engine/types'
-import type { ProjectionResult } from '../engine/types'
-import { useApp } from '../storage/AppContext'
-import { generateId } from '../storage/store'
+import type { Account, ProjectionResult } from '../engine/types'
+import { useAdjustments } from '../hooks/useAdjustments'
+import { generateId } from '../utils/id'
 
 interface Props {
   accounts: Account[]
-  adjustments: Adjustment[]
   baselineResult: ProjectionResult
 }
 
@@ -25,8 +23,8 @@ function variance(baselineResult: ProjectionResult, accountId: string, date: str
   return point ? point.balance : null
 }
 
-export default function AdjustmentPanel({ accounts, adjustments, baselineResult }: Props) {
-  const { dispatch } = useApp()
+export default function AdjustmentPanel({ accounts, baselineResult }: Props) {
+  const { adjustments, addAdjustment, deleteAdjustment } = useAdjustments()
   const today = new Date().toISOString().slice(0, 10)
 
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? '')
@@ -36,14 +34,11 @@ export default function AdjustmentPanel({ accounts, adjustments, baselineResult 
 
   function handleAdd(e: FormEvent) {
     e.preventDefault()
-    dispatch({
-      type: 'ADD_ADJUSTMENT',
-      adjustment: {
-        id: generateId(),
-        accountId,
-        date,
-        actualBalance: parseFloat(balance),
-      },
+    void addAdjustment({
+      id: generateId(),
+      accountId,
+      date,
+      actualBalance: parseFloat(balance),
     })
     setBalance('')
   }
@@ -142,7 +137,7 @@ export default function AdjustmentPanel({ accounts, adjustments, baselineResult 
                     <td>
                       <button
                         style={styles.deleteBtn}
-                        onClick={() => dispatch({ type: 'DELETE_ADJUSTMENT', id: adj.id })}
+                        onClick={() => void deleteAdjustment(adj.id)}
                       >
                         Delete
                       </button>
