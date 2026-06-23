@@ -12,6 +12,11 @@ import type {
 const app = new Hono()
 const API_KEY = process.env.FINPLAN_API_KEY ?? ''
 
+if (!API_KEY) {
+  console.error('Error: FINPLAN_API_KEY is not set. Refusing to start.')
+  process.exit(1)
+}
+
 app.get('/api/health', c => c.json({ ok: true }))
 
 app.use('/api/*', async (c, next) => {

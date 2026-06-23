@@ -9,8 +9,11 @@ vi.mock('bun:sqlite', () => ({
   },
 }))
 
-vi.hoisted(() => {
+const mockExit = vi.hoisted(() => {
   process.env.FINPLAN_API_KEY = 'test-key'
+  const fn = vi.fn()
+  process.exit = fn as unknown as typeof process.exit
+  return fn
 })
 
 import server from './index'
@@ -121,5 +124,11 @@ describe('PUT /api/scenarios/:id — ID mismatch guard', () => {
   it('returns 200 when body.id matches URL :id', async () => {
     const res = await put('/api/scenarios/scenario-1', scenario)
     expect(res.status).toBe(200)
+  })
+})
+
+describe('startup guard — FINPLAN_API_KEY set', () => {
+  it('does not exit when FINPLAN_API_KEY is set to a non-empty string', () => {
+    expect(mockExit).not.toHaveBeenCalled()
   })
 })
