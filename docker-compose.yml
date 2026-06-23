@@ -1,0 +1,12 @@
+services:
+  finplan:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - finplan-data:/data
+    environment:
+      FINPLAN_API_KEY: ${FINPLAN_API_KEY}
+
+volumes:
+  finplan-data:

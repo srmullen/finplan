@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from 'react'
-import type { Scenario, Schedule, Account, ScheduleOverride } from '../engine/types'
-import { useApp } from '../storage/AppContext'
-import { generateId } from '../storage/store'
-import type { AppState } from '../storage/store'
+import type { Scenario, Schedule, Account, ExternalParty, ScheduleOverride } from '../engine/types'
+import { useScenarios } from '../hooks/useScenarios'
+import { useAccounts } from '../hooks/useAccounts'
+import { useExternalParties } from '../hooks/useExternalParties'
+import { useSchedules } from '../hooks/useSchedules'
+import { generateId } from '../utils/id'
 import AccountForm from './AccountForm'
 import ScheduleForm from './ScheduleForm'
 
@@ -13,21 +15,24 @@ interface Props {
 
 function ScenarioEditor({
   scenario,
-  state,
+  accounts,
+  externalParties,
+  schedules,
+  onUpdate,
   onClose,
 }: {
   scenario: Scenario
-  state: AppState
+  accounts: Account[]
+  externalParties: ExternalParty[]
+  schedules: Schedule[]
+  onUpdate: (scenario: Scenario) => void
   onClose: () => void
 }) {
-  const { dispatch } = useApp()
-
   function togglePause(scheduleId: string) {
     const existing = scenario.scheduleOverrides.find(o => o.scheduleId === scheduleId)
     let newOverrides: ScheduleOverride[]
     if (existing) {
       if (existing.paused && Object.keys(existing).length === 2) {
-        // Only paused flag left — remove the override entirely
         newOverrides = scenario.scheduleOverrides.filter(o => o.scheduleId !== scheduleId)
       } else {
         newOverrides = scenario.scheduleOverrides.map(o =>
@@ -37,10 +42,7 @@ function ScenarioEditor({
     } else {
       newOverrides = [...scenario.scheduleOverrides, { scheduleId, paused: true }]
     }
-    dispatch({
-      type: 'UPDATE_SCENARIO',
-      scenario: { ...scenario, scheduleOverrides: newOverrides },
-    })
+    onUpdate({ ...scenario, scheduleOverrides: newOverrides })
   }
 
   function setAmountOverride(scheduleId: string, amount: string) {
@@ -48,7 +50,6 @@ function ScenarioEditor({
     const existing = scenario.scheduleOverrides.find(o => o.scheduleId === scheduleId)
     let newOverrides: ScheduleOverride[]
     if (isNaN(val)) {
-      // Remove amount override
       if (existing) {
         const updated = { ...existing }
         delete updated.amount
@@ -69,64 +70,39 @@ function ScenarioEditor({
     } else {
       newOverrides = [...scenario.scheduleOverrides, { scheduleId, amount: val }]
     }
-    dispatch({
-      type: 'UPDATE_SCENARIO',
-      scenario: { ...scenario, scheduleOverrides: newOverrides },
-    })
+    onUpdate({ ...scenario, scheduleOverrides: newOverrides })
   }
 
   function addAccount(account: Account) {
-    dispatch({
-      type: 'UPDATE_SCENARIO',
-      scenario: { ...scenario, additionalAccounts: [...scenario.additionalAccounts, account] },
-    })
+    onUpdate({ ...scenario, additionalAccounts: [...scenario.additionalAccounts, account] })
     setAddingAccount(false)
   }
 
   function removeAdditionalAccount(id: string) {
-    dispatch({
-      type: 'UPDATE_SCENARIO',
-      scenario: {
-        ...scenario,
-        additionalAccounts: scenario.additionalAccounts.filter(a => a.id !== id),
-      },
-    })
+    onUpdate({ ...scenario, additionalAccounts: scenario.additionalAccounts.filter(a => a.id !== id) })
   }
 
   function addSchedule(schedule: Schedule) {
-    dispatch({
-      type: 'UPDATE_SCENARIO',
-      scenario: { ...scenario, additionalSchedules: [...scenario.additionalSchedules, schedule] },
-    })
+    onUpdate({ ...scenario, additionalSchedules: [...scenario.additionalSchedules, schedule] })
     setAddingSchedule(false)
   }
 
   function removeAdditionalSchedule(id: string) {
-    dispatch({
-      type: 'UPDATE_SCENARIO',
-      scenario: {
-        ...scenario,
-        additionalSchedules: scenario.additionalSchedules.filter(s => s.id !== id),
-      },
-    })
+    onUpdate({ ...scenario, additionalSchedules: scenario.additionalSchedules.filter(s => s.id !== id) })
   }
 
   const [addingAccount, setAddingAccount] = useState(false)
   const [addingSchedule, setAddingSchedule] = useState(false)
 
   const nodeLabel = (id: string) => {
-    const a = state.accounts.find(x => x.id === id)
+    const a = accounts.find(x => x.id === id)
     if (a) return `${a.name} (${a.owner})`
-    const p = state.externalParties.find(x => x.id === id)
+    const p = externalParties.find(x => x.id === id)
     if (p) return p.name
     return id
   }
 
-  const scenarioState: AppState = {
-    ...state,
-    accounts: [...state.accounts, ...scenario.additionalAccounts],
-    schedules: [...state.schedules, ...scenario.additionalSchedules],
-  }
+  const scenarioAccounts = [...accounts, ...scenario.additionalAccounts]
 
   return (
     <div style={styles.editor}>
@@ -135,7 +111,7 @@ function ScenarioEditor({
         <button style={styles.closeBtn} onClick={onClose}>✕ Done</button>
       </div>
 
-      {state.schedules.length > 0 && (
+      {schedules.length > 0 && (
         <div style={styles.section}>
           <h2>Schedule overrides</h2>
           <table style={styles.table}>
@@ -149,7 +125,7 @@ function ScenarioEditor({
               </tr>
             </thead>
             <tbody>
-              {state.schedules.map(s => {
+              {schedules.map(s => {
                 const ov = scenario.scheduleOverrides.find(o => o.scheduleId === s.id)
                 return (
                   <tr key={s.id} style={ov?.paused ? { opacity: 0.45 } : {}}>
@@ -213,7 +189,8 @@ function ScenarioEditor({
         ))}
         {addingSchedule ? (
           <ScheduleForm
-            state={scenarioState}
+            accounts={scenarioAccounts}
+            externalParties={externalParties}
             onSave={addSchedule}
             onCancel={() => setAddingSchedule(false)}
           />
@@ -228,7 +205,10 @@ function ScenarioEditor({
 }
 
 export default function ScenarioManager({ activeScenarioIds, onToggleScenario }: Props) {
-  const { state, dispatch } = useApp()
+  const { scenarios, addScenario, updateScenario, deleteScenario } = useScenarios()
+  const { accounts } = useAccounts()
+  const { externalParties } = useExternalParties()
+  const { schedules } = useSchedules()
   const [newName, setNewName] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [renamingId, setRenamingId] = useState<string | null>(null)
@@ -236,15 +216,12 @@ export default function ScenarioManager({ activeScenarioIds, onToggleScenario }:
 
   function createScenario(e: FormEvent) {
     e.preventDefault()
-    dispatch({
-      type: 'ADD_SCENARIO',
-      scenario: {
-        id: generateId(),
-        name: newName.trim(),
-        scheduleOverrides: [],
-        additionalSchedules: [],
-        additionalAccounts: [],
-      },
+    void addScenario({
+      id: generateId(),
+      name: newName.trim(),
+      scheduleOverrides: [],
+      additionalSchedules: [],
+      additionalAccounts: [],
     })
     setNewName('')
   }
@@ -256,18 +233,18 @@ export default function ScenarioManager({ activeScenarioIds, onToggleScenario }:
 
   function commitRename(scenario: Scenario, e: FormEvent) {
     e.preventDefault()
-    dispatch({ type: 'UPDATE_SCENARIO', scenario: { ...scenario, name: renameValue.trim() } })
+    void updateScenario({ ...scenario, name: renameValue.trim() })
     setRenamingId(null)
   }
 
-  function deleteScenario(id: string) {
+  function handleDeleteScenario(id: string) {
     if (confirm('Delete this scenario?')) {
-      dispatch({ type: 'DELETE_SCENARIO', id })
+      void deleteScenario(id)
       if (editingId === id) setEditingId(null)
     }
   }
 
-  const editingScenario = editingId ? state.scenarios.find(s => s.id === editingId) : null
+  const editingScenario = editingId ? scenarios.find(s => s.id === editingId) : null
 
   return (
     <div style={styles.manager}>
@@ -285,11 +262,11 @@ export default function ScenarioManager({ activeScenarioIds, onToggleScenario }:
         </button>
       </form>
 
-      {state.scenarios.length === 0 ? (
+      {scenarios.length === 0 ? (
         <p style={styles.empty}>No scenarios yet.</p>
       ) : (
         <div style={styles.list}>
-          {state.scenarios.map(s => (
+          {scenarios.map(s => (
             <div key={s.id} style={styles.row}>
               <label style={styles.checkLabel}>
                 <input
@@ -317,7 +294,7 @@ export default function ScenarioManager({ activeScenarioIds, onToggleScenario }:
                   {editingId === s.id ? 'Close' : 'Edit'}
                 </button>
                 <button style={styles.tinyBtn} onClick={() => startRename(s)}>Rename</button>
-                <button style={{ ...styles.tinyBtn, color: '#dc2626', borderColor: '#fca5a5' }} onClick={() => deleteScenario(s.id)}>
+                <button style={{ ...styles.tinyBtn, color: '#dc2626', borderColor: '#fca5a5' }} onClick={() => handleDeleteScenario(s.id)}>
                   Delete
                 </button>
               </div>
@@ -329,7 +306,10 @@ export default function ScenarioManager({ activeScenarioIds, onToggleScenario }:
       {editingScenario && (
         <ScenarioEditor
           scenario={editingScenario}
-          state={state}
+          accounts={accounts}
+          externalParties={externalParties}
+          schedules={schedules}
+          onUpdate={updated => void updateScenario(updated)}
           onClose={() => setEditingId(null)}
         />
       )}

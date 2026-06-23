@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   LineChart,
   Line,
@@ -10,8 +10,9 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from 'recharts'
-import { project } from '../engine/projection'
-import { useApp } from '../storage/AppContext'
+import type { ProjectionResult } from '../engine/types'
+import { get } from '../api/client'
+import { useAccounts } from '../hooks/useAccounts'
 import AdjustmentPanel from '../components/AdjustmentPanel'
 import ScenarioManager from '../components/ScenarioManager'
 
@@ -53,13 +54,24 @@ function findCrossings(
   return dates
 }
 
+function buildProjectionUrl(startDate: string, endDate: string, scenarioId?: string, noAdj?: boolean) {
+  const params = new URLSearchParams({ startDate, endDate })
+  if (scenarioId) params.set('scenarioId', scenarioId)
+  if (noAdj) params.set('noAdj', '1')
+  return `/api/projection?${params.toString()}`
+}
+
 export default function ProjectionView() {
-  const { state } = useApp()
+  const { accounts } = useAccounts()
   const [horizonMonths, setHorizonMonths] = useState(12)
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set())
   const [showAdjustments, setShowAdjustments] = useState(false)
   const [showScenarios, setShowScenarios] = useState(false)
   const [activeScenarioIds, setActiveScenarioIds] = useState<Set<string>>(new Set())
+
+  const [result, setResult] = useState<ProjectionResult>({})
+  const [baselineNoAdj, setBaselineNoAdj] = useState<ProjectionResult>({})
+  const [scenarioResults, setScenarioResults] = useState<Record<string, ProjectionResult>>({})
 
   const today = new Date()
   const startDate = today.toISOString().slice(0, 10)
@@ -67,42 +79,46 @@ export default function ProjectionView() {
     .toISOString()
     .slice(0, 10)
 
-  const baseInput = {
-    accounts: state.accounts,
-    externalParties: state.externalParties,
-    schedules: state.schedules,
-    adjustments: state.adjustments,
-    startDate,
-    endDate,
-  }
+  // Track in-flight fetch to avoid race conditions
+  const fetchIdRef = useRef(0)
 
-  const result = useMemo(
-    () => (state.accounts.length === 0 ? {} : project(baseInput)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- baseInput is an object literal rebuilt every render; listing it would cause an infinite loop
-    [state, startDate, endDate],
-  )
-
-  const baselineNoAdj = useMemo(
-    () =>
-      state.accounts.length === 0
-        ? {}
-        : project({ ...baseInput, adjustments: [] }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- baseInput is an object literal rebuilt every render; listing it would cause an infinite loop
-    [state.accounts, state.externalParties, state.schedules, startDate, endDate],
-  )
-
-  // Run each active scenario
-  const scenarioResults = useMemo(() => {
-    const out: Record<string, ReturnType<typeof project>> = {}
-    for (const sc of state.scenarios) {
-      if (!activeScenarioIds.has(sc.id)) continue
-      out[sc.id] = project({ ...baseInput, scenario: sc })
+  useEffect(() => {
+    if (accounts.length === 0) {
+      setResult({})
+      setBaselineNoAdj({})
+      return
     }
-    return out
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- baseInput is an object literal rebuilt every render; listing it would cause an infinite loop
-  }, [state, activeScenarioIds, startDate, endDate])
 
-  const visibleAccounts = state.accounts.filter(a => !hiddenIds.has(a.id))
+    const id = ++fetchIdRef.current
+
+    void Promise.all([
+      get<ProjectionResult>(buildProjectionUrl(startDate, endDate)),
+      get<ProjectionResult>(buildProjectionUrl(startDate, endDate, undefined, true)),
+    ]).then(([main, noAdj]) => {
+      if (fetchIdRef.current !== id) return
+      setResult(main)
+      setBaselineNoAdj(noAdj)
+    })
+  }, [accounts, startDate, endDate])
+
+  useEffect(() => {
+    if (activeScenarioIds.size === 0) {
+      setScenarioResults({})
+      return
+    }
+
+    const id = ++fetchIdRef.current
+    const fetches = [...activeScenarioIds].map(scId =>
+      get<ProjectionResult>(buildProjectionUrl(startDate, endDate, scId)).then(r => [scId, r] as const),
+    )
+
+    void Promise.all(fetches).then(entries => {
+      if (fetchIdRef.current !== id) return
+      setScenarioResults(Object.fromEntries(entries))
+    })
+  }, [activeScenarioIds, startDate, endDate])
+
+  const visibleAccounts = accounts.filter(a => !hiddenIds.has(a.id))
 
   const refSeries =
     visibleAccounts.length > 0 ? sampleMonthly(result[visibleAccounts[0]!.id] ?? []) : []
@@ -112,7 +128,6 @@ export default function ProjectionView() {
     for (const account of visibleAccounts) {
       const point = (result[account.id] ?? []).find(p => p.date === date)
       row[account.id] = point ? Math.round(point.balance) : 0
-      // Scenario overlays per account
       for (const [scId, scResult] of Object.entries(scenarioResults)) {
         const scPoint = (scResult[account.id] ?? []).find(p => p.date === date)
         row[`${account.id}_${scId}`] = scPoint ? Math.round(scPoint.balance) : 0
@@ -174,12 +189,12 @@ export default function ProjectionView() {
         </div>
       </div>
 
-      {state.accounts.length === 0 ? (
+      {accounts.length === 0 ? (
         <p style={styles.empty}>No accounts yet. Add accounts and schedules to see a projection.</p>
       ) : (
         <>
           <div style={styles.filter}>
-            {state.accounts.map((a, i) => (
+            {accounts.map((a, i) => (
               <label key={a.id} style={styles.filterLabel}>
                 <input
                   type="checkbox"
@@ -222,7 +237,6 @@ export default function ProjectionView() {
                   strokeWidth={1}
                 />
               ))}
-              {/* Baseline lines */}
               {visibleAccounts.map((a, i) => (
                 <Line
                   key={a.id}
@@ -234,23 +248,20 @@ export default function ProjectionView() {
                   strokeWidth={2}
                 />
               ))}
-              {/* Scenario overlay lines (dashed) */}
-              {state.scenarios
-                .filter(sc => activeScenarioIds.has(sc.id))
-                .flatMap(sc =>
-                  visibleAccounts.map((a, i) => (
-                    <Line
-                      key={`${a.id}_${sc.id}`}
-                      type="monotone"
-                      dataKey={`${a.id}_${sc.id}`}
-                      name={`${a.name} (${sc.name})`}
-                      stroke={PALETTE[i % PALETTE.length]}
-                      dot={false}
-                      strokeWidth={1.5}
-                      strokeDasharray="6 3"
-                    />
-                  )),
-                )}
+              {[...activeScenarioIds].flatMap(scId =>
+                visibleAccounts.map((a, i) => (
+                  <Line
+                    key={`${a.id}_${scId}`}
+                    type="monotone"
+                    dataKey={`${a.id}_${scId}`}
+                    name={`${a.name} (scenario)`}
+                    stroke={PALETTE[i % PALETTE.length]}
+                    dot={false}
+                    strokeWidth={1.5}
+                    strokeDasharray="6 3"
+                  />
+                )),
+              )}
             </LineChart>
           </ResponsiveContainer>
 
@@ -263,8 +274,7 @@ export default function ProjectionView() {
 
           {showAdjustments && (
             <AdjustmentPanel
-              accounts={state.accounts}
-              adjustments={state.adjustments}
+              accounts={accounts}
               baselineResult={baselineNoAdj}
             />
           )}
