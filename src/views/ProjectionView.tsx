@@ -79,6 +79,7 @@ export default function ProjectionView() {
     .toISOString()
     .slice(0, 10)
 
+  // Separate refs so concurrent fires don't cancel each other's in-flight request
   const baselineFetchIdRef = useRef(0)
   const scenarioFetchIdRef = useRef(0)
 
