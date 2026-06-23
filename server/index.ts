@@ -262,7 +262,8 @@ app.get('/api/projection', async c => {
   let scenario: Scenario | undefined
   if (scenarioId) {
     const row = db.prepare('SELECT * FROM scenarios WHERE id = ?').get(scenarioId) as Record<string, unknown> | null
-    if (row) scenario = rowToScenario(row)
+    if (!row) return c.json({ error: 'Not found' }, 404)
+    scenario = rowToScenario(row)
   }
 
   const noAdj = c.req.query('noAdj') === '1'
