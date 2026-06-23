@@ -12,6 +12,8 @@ import type {
 const app = new Hono()
 const API_KEY = process.env.FINPLAN_API_KEY ?? ''
 
+app.get('/api/health', c => c.json({ ok: true }))
+
 app.use('/api/*', async (c, next) => {
   const auth = c.req.header('Authorization')
   if (!auth || auth !== `Bearer ${API_KEY}`) {
@@ -19,8 +21,6 @@ app.use('/api/*', async (c, next) => {
   }
   await next()
 })
-
-app.get('/api/health', c => c.json({ ok: true }))
 
 // --- Accounts ---
 

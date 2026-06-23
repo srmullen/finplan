@@ -27,6 +27,19 @@ function put(path: string, body: unknown) {
   )
 }
 
+describe('GET /api/health', () => {
+  it('returns 200 { ok: true } without Authorization header', async () => {
+    const res = await server.fetch(new Request('http://localhost/api/health'))
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ ok: true })
+  })
+
+  it('returns 401 for other /api/* routes without Authorization', async () => {
+    const res = await server.fetch(new Request('http://localhost/api/accounts'))
+    expect(res.status).toBe(401)
+  })
+})
+
 describe('PUT /api/accounts/:id — ID mismatch guard', () => {
   const account = {
     id: 'acc-1',
