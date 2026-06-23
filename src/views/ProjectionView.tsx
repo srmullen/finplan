@@ -79,8 +79,8 @@ export default function ProjectionView() {
     .toISOString()
     .slice(0, 10)
 
-  // Track in-flight fetch to avoid race conditions
-  const fetchIdRef = useRef(0)
+  const baselineFetchIdRef = useRef(0)
+  const scenarioFetchIdRef = useRef(0)
 
   useEffect(() => {
     if (accounts.length === 0) {
@@ -89,13 +89,13 @@ export default function ProjectionView() {
       return
     }
 
-    const id = ++fetchIdRef.current
+    const id = ++baselineFetchIdRef.current
 
     void Promise.all([
       get<ProjectionResult>(buildProjectionUrl(startDate, endDate)),
       get<ProjectionResult>(buildProjectionUrl(startDate, endDate, undefined, true)),
     ]).then(([main, noAdj]) => {
-      if (fetchIdRef.current !== id) return
+      if (baselineFetchIdRef.current !== id) return
       setResult(main)
       setBaselineNoAdj(noAdj)
     })
@@ -107,13 +107,13 @@ export default function ProjectionView() {
       return
     }
 
-    const id = ++fetchIdRef.current
+    const id = ++scenarioFetchIdRef.current
     const fetches = [...activeScenarioIds].map(scId =>
       get<ProjectionResult>(buildProjectionUrl(startDate, endDate, scId)).then(r => [scId, r] as const),
     )
 
     void Promise.all(fetches).then(entries => {
-      if (fetchIdRef.current !== id) return
+      if (scenarioFetchIdRef.current !== id) return
       setScenarioResults(Object.fromEntries(entries))
     })
   }, [activeScenarioIds, startDate, endDate])
