@@ -123,3 +123,20 @@ describe('PUT /api/scenarios/:id — ID mismatch guard', () => {
     expect(res.status).toBe(200)
   })
 })
+
+describe('GET /api/projection — scenarioId handling', () => {
+  const base = 'http://localhost/api/projection?startDate=2024-01-01&endDate=2024-12-31'
+
+  it('returns 200 for baseline projection without scenarioId', async () => {
+    const res = await server.fetch(new Request(base, { headers: { Authorization: AUTH } }))
+    expect(res.status).toBe(200)
+  })
+
+  it('returns 404 with error body when scenarioId is not found', async () => {
+    const res = await server.fetch(
+      new Request(`${base}&scenarioId=nonexistent`, { headers: { Authorization: AUTH } }),
+    )
+    expect(res.status).toBe(404)
+    expect(await res.json()).toMatchObject({ error: expect.any(String) })
+  })
+})
