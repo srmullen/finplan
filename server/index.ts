@@ -58,6 +58,7 @@ app.get('/api/accounts/:id', c => {
 
 app.put('/api/accounts/:id', async c => {
   const body = await c.req.json<Account>()
+  if (body.id !== c.req.param('id')) return c.json({ error: 'ID mismatch' }, 400)
   db.prepare(
     'UPDATE accounts SET name = ?, type = ?, owner = ?, seed_balance = ?, seed_date = ?, rate = ?, amortizing = ? WHERE id = ?',
   ).run(body.name, body.type, body.owner, body.seedBalance, body.seedDate, body.rate, body.amortizing ? 1 : 0, c.req.param('id'))
@@ -94,6 +95,7 @@ app.get('/api/external-parties/:id', c => {
 
 app.put('/api/external-parties/:id', async c => {
   const body = await c.req.json<ExternalParty>()
+  if (body.id !== c.req.param('id')) return c.json({ error: 'ID mismatch' }, 400)
   db.prepare('UPDATE external_parties SET name = ? WHERE id = ?').run(body.name, c.req.param('id'))
   return c.json(body)
 })
@@ -140,6 +142,7 @@ app.get('/api/schedules/:id', c => {
 
 app.put('/api/schedules/:id', async c => {
   const body = await c.req.json<Schedule>()
+  if (body.id !== c.req.param('id')) return c.json({ error: 'ID mismatch' }, 400)
   db.prepare(
     'UPDATE schedules SET source_id = ?, destination_id = ?, amount = ?, estimated = ?, frequency = ?, start_date = ?, end_date = ?, terminate_at_zero = ? WHERE id = ?',
   ).run(body.sourceId, body.destinationId, body.amount, body.estimated ? 1 : 0, body.frequency, body.startDate, body.endDate ?? null, body.terminateAtZero ? 1 : 0, c.req.param('id'))
@@ -218,6 +221,7 @@ app.get('/api/scenarios/:id', c => {
 
 app.put('/api/scenarios/:id', async c => {
   const body = await c.req.json<Scenario>()
+  if (body.id !== c.req.param('id')) return c.json({ error: 'ID mismatch' }, 400)
   db.prepare(
     'UPDATE scenarios SET name = ?, schedule_overrides = ?, additional_schedules = ?, additional_accounts = ? WHERE id = ?',
   ).run(

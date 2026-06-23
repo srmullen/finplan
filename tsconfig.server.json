@@ -13,5 +13,6 @@
     "noFallthroughCasesInSwitch": true,
     "types": ["bun-types"]
   },
-  "include": ["server", "src/engine"]
+  "include": ["server", "src/engine"],
+  "exclude": ["server/**/*.test.ts"]
 }

@@ -17,15 +17,19 @@ _Avoid_: Source, sink, counterparty, payee
 ### Account properties
 
 **Owner**:
-A label on an Account identifying who it belongs to within the household (e.g., Sean, Wife, Joint). Cosmetic grouping only — no access control.
+A free-text label on an Account identifying who it belongs to within the household (e.g., Sean, Wife, Joint). Cosmetic grouping only — no access control. Not a first-class entity — stored as a plain string on Account.
 _Avoid_: User, member, person
+
+**Institution**:
+An optional free-text label on an Account naming the bank or provider that holds it (e.g., Chase, Fidelity, Navy Federal). Cosmetic only — used for display and filtering, not for logic.
+_Avoid_: Bank, provider, issuer
 
 **Rate**:
 An annual percentage applied to an Account's balance each period by the Projection engine. Positive for growth (savings, investments); negative for interest charges (credit card debt). Separate from Schedules — Rate is balance-driven, Schedules are fixed-amount flows.
 _Avoid_: Interest rate, APY, return, yield
 
 **Amortizing Account**:
-A liability Account whose balance decreases toward zero over time and closes when it reaches zero (e.g., car loan, mortgage). Payments to it automatically terminate at payoff.
+A liability Account stored with a negative seed balance that approaches zero as payments are applied, closing when it reaches zero (e.g., car loan, mortgage). Payments to it automatically terminate at payoff. The user enters the amount owed as a positive number; the system stores it as negative.
 _Avoid_: Term loan, closed-end account
 
 **Revolving Account**:
