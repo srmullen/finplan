@@ -9,8 +9,11 @@ vi.mock('bun:sqlite', () => ({
   },
 }))
 
-vi.hoisted(() => {
+const mockExit = vi.hoisted(() => {
   process.env.FINPLAN_API_KEY = 'test-key'
+  const fn = vi.fn()
+  process.exit = fn as unknown as typeof process.exit
+  return fn
 })
 
 import server from './index'
@@ -138,5 +141,11 @@ describe('GET /api/projection — scenarioId handling', () => {
     )
     expect(res.status).toBe(404)
     expect(await res.json()).toMatchObject({ error: expect.any(String) })
+  })
+})
+
+describe('startup guard — FINPLAN_API_KEY set', () => {
+  it('does not exit when FINPLAN_API_KEY is set to a non-empty string', () => {
+    expect(mockExit).not.toHaveBeenCalled()
   })
 })
