@@ -17,4 +17,4 @@ jobs:
         with:
           verb: call
           args: ci --source=.
-          version: "0.18.12"
+          version: "latest"
