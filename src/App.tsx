@@ -1,4 +1,5 @@
 import { BrowserRouter, NavLink, Route, Routes } from 'react-router-dom'
+import { Toaster } from 'sonner'
 import ProjectionView from './views/ProjectionView'
 import AccountsView from './views/AccountsView'
 import SchedulesView from './views/SchedulesView'
@@ -6,6 +7,7 @@ import SchedulesView from './views/SchedulesView'
 export default function App() {
   return (
     <BrowserRouter>
+      <Toaster position="top-right" richColors />
       <nav>
         <NavLink to="/" end>Projection</NavLink>
         <NavLink to="/accounts">Accounts</NavLink>
