@@ -1,6 +1,6 @@
-import { Database } from 'bun:sqlite'
+import { Database } from "bun:sqlite";
 
-const db = new Database(process.env.DB_PATH ?? 'finplan.db', { create: true })
+const db = new Database(process.env.DB_PATH ?? "finplan.db", { create: true });
 
 db.run(`
   CREATE TABLE IF NOT EXISTS accounts (
@@ -13,14 +13,14 @@ db.run(`
     rate REAL NOT NULL DEFAULT 0,
     amortizing INTEGER NOT NULL DEFAULT 0
   )
-`)
+`);
 
 db.run(`
   CREATE TABLE IF NOT EXISTS external_parties (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL
   )
-`)
+`);
 
 db.run(`
   CREATE TABLE IF NOT EXISTS schedules (
@@ -34,7 +34,7 @@ db.run(`
     end_date TEXT,
     terminate_at_zero INTEGER NOT NULL DEFAULT 0
   )
-`)
+`);
 
 db.run(`
   CREATE TABLE IF NOT EXISTS adjustments (
@@ -43,7 +43,7 @@ db.run(`
     date TEXT NOT NULL,
     actual_balance REAL NOT NULL
   )
-`)
+`);
 
 db.run(`
   CREATE TABLE IF NOT EXISTS scenarios (
@@ -53,6 +53,6 @@ db.run(`
     additional_schedules TEXT NOT NULL DEFAULT '[]',
     additional_accounts TEXT NOT NULL DEFAULT '[]'
   )
-`)
+`);
 
-export default db
+export default db;
