@@ -32,22 +32,25 @@ export default function AccountForm({
 	const [type, setType] = useState<AccountType>(initial?.type ?? "checking");
 	const [owner, setOwner] = useState(initial?.owner ?? "");
 	const [institution, setInstitution] = useState(initial?.institution ?? "");
-	const [seedBalance, setSeedBalance] = useState(
-		String(initial?.seedBalance ?? "0"),
-	);
+	const [seedBalance, setSeedBalance] = useState(() => {
+		const raw = initial?.seedBalance ?? 0;
+		return String(initial?.amortizing ? Math.abs(raw) : raw);
+	});
 	const [seedDate, setSeedDate] = useState(initial?.seedDate ?? today);
 	const [rate, setRate] = useState(String((initial?.rate ?? 0) * 100));
 	const [amortizing, setAmortizing] = useState(initial?.amortizing ?? false);
 
 	function handleSubmit(e: FormEvent) {
 		e.preventDefault();
+		const parsedBalance = parseFloat(seedBalance) || 0;
 		const account: Account = {
 			id: initial?.id ?? generateId(),
 			name: name.trim(),
 			type,
 			owner: owner.trim(),
 			institution: institution.trim() || undefined,
-			seedBalance: parseFloat(seedBalance) || 0,
+			seedBalance:
+				amortizing && parsedBalance > 0 ? -parsedBalance : parsedBalance,
 			seedDate,
 			rate: parseFloat(rate) / 100 || 0,
 			amortizing,
