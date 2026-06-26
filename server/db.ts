@@ -15,6 +15,14 @@ db.run(`
   )
 `);
 
+try {
+	db.run(
+		"ALTER TABLE accounts ADD COLUMN institution TEXT NOT NULL DEFAULT ''",
+	);
+} catch {
+	// column already exists
+}
+
 db.run(`
   CREATE TABLE IF NOT EXISTS external_parties (
     id TEXT PRIMARY KEY,
