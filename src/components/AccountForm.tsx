@@ -1,9 +1,11 @@
 import { type FormEvent, useState } from "react";
-import type { Account, AccountType, Owner } from "../engine/types";
+import type { Account, AccountType } from "../engine/types";
 import { generateId } from "../utils/id";
 
 interface Props {
 	initial?: Account;
+	ownerSuggestions: string[];
+	institutionSuggestions: string[];
 	onSave: (account: Account) => void;
 	onCancel: () => void;
 }
@@ -17,14 +19,19 @@ const ACCOUNT_TYPES: AccountType[] = [
 	"other",
 ];
 
-const OWNERS: Owner[] = ["Sean", "Wife", "Joint"];
-
-export default function AccountForm({ initial, onSave, onCancel }: Props) {
+export default function AccountForm({
+	initial,
+	ownerSuggestions,
+	institutionSuggestions,
+	onSave,
+	onCancel,
+}: Props) {
 	const today = new Date().toISOString().slice(0, 10);
 
 	const [name, setName] = useState(initial?.name ?? "");
 	const [type, setType] = useState<AccountType>(initial?.type ?? "checking");
-	const [owner, setOwner] = useState<Owner>(initial?.owner ?? "Sean");
+	const [owner, setOwner] = useState(initial?.owner ?? "");
+	const [institution, setInstitution] = useState(initial?.institution ?? "");
 	const [seedBalance, setSeedBalance] = useState(() => {
 		const raw = initial?.seedBalance ?? 0;
 		return String(initial?.amortizing ? Math.abs(raw) : raw);
@@ -40,7 +47,8 @@ export default function AccountForm({ initial, onSave, onCancel }: Props) {
 			id: initial?.id ?? generateId(),
 			name: name.trim(),
 			type,
-			owner,
+			owner: owner.trim(),
+			institution: institution.trim() || undefined,
 			seedBalance:
 				amortizing && parsedBalance > 0 ? -parsedBalance : parsedBalance,
 			seedDate,
@@ -81,18 +89,36 @@ export default function AccountForm({ initial, onSave, onCancel }: Props) {
 
 				<div style={styles.field}>
 					<label htmlFor="acct-owner">Owner</label>
-					<select
+					<input
 						id="acct-owner"
+						required
+						list="owner-suggestions"
 						value={owner}
-						onChange={(e) => setOwner(e.target.value as Owner)}
-					>
-						{OWNERS.map((o) => (
-							<option key={o} value={o}>
-								{o}
-							</option>
+						onChange={(e) => setOwner(e.target.value)}
+						placeholder="e.g. Sean"
+					/>
+					<datalist id="owner-suggestions">
+						{ownerSuggestions.map((o) => (
+							<option key={o} value={o} />
 						))}
-					</select>
+					</datalist>
 				</div>
+			</div>
+
+			<div style={styles.field}>
+				<label htmlFor="acct-institution">Institution</label>
+				<input
+					id="acct-institution"
+					list="institution-suggestions"
+					value={institution}
+					onChange={(e) => setInstitution(e.target.value)}
+					placeholder="e.g. Chase, Fidelity"
+				/>
+				<datalist id="institution-suggestions">
+					{institutionSuggestions.map((i) => (
+						<option key={i} value={i} />
+					))}
+				</datalist>
 			</div>
 
 			<div style={styles.row}>

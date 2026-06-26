@@ -1,11 +1,9 @@
 import { useState } from "react";
 import AccountForm from "../components/AccountForm";
 import ExternalPartyForm from "../components/ExternalPartyForm";
-import type { Account, ExternalParty, Owner } from "../engine/types";
+import type { Account, ExternalParty } from "../engine/types";
 import { useAccounts } from "../hooks/useAccounts";
 import { useExternalParties } from "../hooks/useExternalParties";
-
-const OWNERS: Owner[] = ["Sean", "Wife", "Joint"];
 
 function formatBalance(n: number) {
 	return new Intl.NumberFormat("en-US", {
@@ -56,10 +54,20 @@ export default function AccountsView() {
 		}
 	}
 
-	const accountsByOwner = OWNERS.map((owner) => ({
-		owner,
-		accounts: accounts.filter((a) => a.owner === owner),
-	})).filter((g) => g.accounts.length > 0);
+	const ownerSuggestions = [
+		...new Set(accounts.map((a) => a.owner).filter(Boolean)),
+	].sort();
+	const institutionSuggestions = [
+		...new Set(accounts.map((a) => a.institution ?? "").filter(Boolean)),
+	].sort();
+
+	const distinctOwners = [...new Set(accounts.map((a) => a.owner))].sort();
+	const accountsByOwner = distinctOwners
+		.map((owner) => ({
+			owner,
+			accounts: accounts.filter((a) => a.owner === owner),
+		}))
+		.filter((g) => g.accounts.length > 0);
 
 	return (
 		<div>
@@ -68,6 +76,8 @@ export default function AccountsView() {
 			{(showAccountForm || editingAccount) && (
 				<AccountForm
 					initial={editingAccount ?? undefined}
+					ownerSuggestions={ownerSuggestions}
+					institutionSuggestions={institutionSuggestions}
 					onSave={saveAccount}
 					onCancel={() => {
 						setShowAccountForm(false);
@@ -96,6 +106,7 @@ export default function AccountsView() {
 							<thead>
 								<tr>
 									<th>Name</th>
+									<th>Institution</th>
 									<th>Type</th>
 									<th style={{ textAlign: "right" }}>Balance</th>
 									<th>As of</th>
@@ -108,6 +119,7 @@ export default function AccountsView() {
 								{ownerAccounts.map((a) => (
 									<tr key={a.id}>
 										<td>{a.name}</td>
+										<td>{a.institution ?? ""}</td>
 										<td>{a.type.replace("_", " ")}</td>
 										<td
 											style={{
