@@ -20,12 +20,19 @@ Implement the work, commit it, and open a pull request.
 
 2. Run `/implement` to build, test, and commit the work to the current branch.
 
-3. Push the branch to origin:
+3. Run `npm run fix` to auto-fix any lint/format issues, then stage and commit the changes if any were made:
+   ```
+   npm run fix
+   git diff --quiet || (git add -A && git commit -m "chore: apply biome auto-fixes")
+   ```
+   If `npm run fix` exits with errors for issues it could not auto-fix (e.g. lint violations that require manual intervention), stop and resolve them before continuing.
+
+4. Push the branch to origin:
    ```
    git push -u origin <branch>
    ```
 
-4. Open a pull request with `gh pr create`. Use `Closes #N` in the body to link and auto-close the source issue. Follow the PR body format below.
+5. Open a pull request with `gh pr create`. Use `Closes #N` in the body to link and auto-close the source issue. Follow the PR body format below.
 
 ## PR body format
 
