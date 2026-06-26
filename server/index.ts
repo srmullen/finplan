@@ -257,13 +257,35 @@ app.delete("/api/adjustments/:id", (c) => {
 
 // --- Scenarios ---
 
+function safeParseArray(value: unknown, column: string): unknown[] {
+	if (value == null || value === "") return [];
+	try {
+		const parsed = JSON.parse(value as string);
+		return Array.isArray(parsed) ? parsed : [];
+	} catch {
+		console.warn(
+			`rowToScenario: invalid JSON in column "${column}", falling back to []`,
+		);
+		return [];
+	}
+}
+
 function rowToScenario(row: Record<string, unknown>): Scenario {
 	return {
 		id: row.id as string,
 		name: row.name as string,
-		scheduleOverrides: JSON.parse(row.schedule_overrides as string),
-		additionalSchedules: JSON.parse(row.additional_schedules as string),
-		additionalAccounts: JSON.parse(row.additional_accounts as string),
+		scheduleOverrides: safeParseArray(
+			row.schedule_overrides,
+			"schedule_overrides",
+		) as Scenario["scheduleOverrides"],
+		additionalSchedules: safeParseArray(
+			row.additional_schedules,
+			"additional_schedules",
+		) as Scenario["additionalSchedules"],
+		additionalAccounts: safeParseArray(
+			row.additional_accounts,
+			"additional_accounts",
+		) as Scenario["additionalAccounts"],
 	};
 }
 
