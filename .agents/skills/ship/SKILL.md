@@ -27,12 +27,18 @@ Implement the work, commit it, and open a pull request.
    ```
    If `bun run fix` exits with errors for issues it could not auto-fix (e.g. lint violations that require manual intervention), stop and resolve them before continuing.
 
-4. Push the branch to origin:
+4. Run `bun run ci` to verify the full CI pipeline passes locally:
+   ```
+   bun run ci
+   ```
+   If it fails, diagnose and fix the issues, then re-run until it passes. Commit any fixes before continuing.
+
+5. Push the branch to origin:
    ```
    git push -u origin <branch>
    ```
 
-5. Open a pull request with `gh pr create`. Use `Closes #N` in the body to link and auto-close the source issue. Follow the PR body format below.
+6. Open a pull request with `gh pr create`. Use `Closes #N` in the body to link and auto-close the source issue. Follow the PR body format below.
 
 ## PR body format
 
