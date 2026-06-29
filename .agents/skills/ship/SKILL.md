@@ -20,16 +20,16 @@ Implement the work, commit it, and open a pull request.
 
 2. Run `/implement` to build, test, and commit the work to the current branch.
 
-3. Run `bun run fix` to auto-fix any lint/format issues, then stage and commit the changes if any were made:
+3. Run `npm run fix` to auto-fix any lint/format issues, then stage and commit the changes if any were made:
    ```
-   bun run fix
+   npm run fix
    git diff --quiet || (git add -A && git commit -m "chore: apply biome auto-fixes")
    ```
-   If `bun run fix` exits with errors for issues it could not auto-fix (e.g. lint violations that require manual intervention), stop and resolve them before continuing.
+   If `npm run fix` exits with errors for issues it could not auto-fix (e.g. lint violations that require manual intervention), stop and resolve them before continuing.
 
-4. Run `bun run ci` to verify the full CI pipeline passes locally:
+4. Run `npm run ci` to verify the full CI pipeline passes locally:
    ```
-   bun run ci
+   npm run ci
    ```
    If it fails, diagnose and fix the issues, then re-run until it passes. Commit any fixes before continuing.
 

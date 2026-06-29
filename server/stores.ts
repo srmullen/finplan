@@ -1,4 +1,4 @@
-import type { Database } from "bun:sqlite";
+import type Database from "better-sqlite3";
 import type {
 	Account,
 	Adjustment,
@@ -88,7 +88,7 @@ function rowToScenario(row: Record<string, unknown>): Scenario {
 	};
 }
 
-export function createSQLiteStores(db: Database): Stores {
+export function createSQLiteStores(db: Database.Database): Stores {
 	const accounts: AccountStore = {
 		list: () =>
 			(

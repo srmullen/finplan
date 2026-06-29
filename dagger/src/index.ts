@@ -8,19 +8,21 @@ class Finplan {
 	 */
 	@func()
 	async ci(source: Directory): Promise<string> {
-		const nodeCache = dag.cacheVolume("finplan-node-modules");
+		// Cache key includes the lock file hash so it invalidates when deps change
+		const lockHash = await source.file("package-lock.json").digest();
+		const nodeCache = dag.cacheVolume(`finplan-node-modules-${lockHash}`);
 
 		return dag
 			.container()
-			.from("oven/bun:latest")
+			.from("node:22-alpine")
 			.withDirectory("/app", source, { exclude: ["node_modules", ".git"] })
 			.withWorkdir("/app")
 			.withMountedCache("/app/node_modules", nodeCache)
-			.withExec(["bun", "install", "--frozen-lockfile"])
-			.withExec(["bun", "run", "typecheck"])
-			.withExec(["bun", "run", "typecheck:server"])
-			.withExec(["bun", "run", "test:run"])
-			.withExec(["bun", "run", "build"])
+			.withExec(["npm", "install"])
+			.withExec(["npm", "run", "typecheck"])
+			.withExec(["npm", "run", "typecheck:server"])
+			.withExec(["npm", "run", "test:coverage"])
+			.withExec(["npm", "run", "build"])
 			.stdout();
 	}
 }

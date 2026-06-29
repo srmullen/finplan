@@ -1,8 +1,8 @@
-import { Database } from "bun:sqlite";
+import Database from "better-sqlite3";
 
-const db = new Database(process.env.DB_PATH ?? "finplan.db", { create: true });
+const db = new Database(process.env.DB_PATH ?? "finplan.db");
 
-db.run(`
+db.exec(`
   CREATE TABLE IF NOT EXISTS accounts (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
@@ -16,21 +16,21 @@ db.run(`
 `);
 
 try {
-	db.run(
+	db.exec(
 		"ALTER TABLE accounts ADD COLUMN institution TEXT NOT NULL DEFAULT ''",
 	);
 } catch {
 	// column already exists
 }
 
-db.run(`
+db.exec(`
   CREATE TABLE IF NOT EXISTS external_parties (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL
   )
 `);
 
-db.run(`
+db.exec(`
   CREATE TABLE IF NOT EXISTS schedules (
     id TEXT PRIMARY KEY,
     source_id TEXT NOT NULL,
@@ -44,7 +44,7 @@ db.run(`
   )
 `);
 
-db.run(`
+db.exec(`
   CREATE TABLE IF NOT EXISTS adjustments (
     id TEXT PRIMARY KEY,
     account_id TEXT NOT NULL,
@@ -53,7 +53,7 @@ db.run(`
   )
 `);
 
-db.run(`
+db.exec(`
   CREATE TABLE IF NOT EXISTS scenarios (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,

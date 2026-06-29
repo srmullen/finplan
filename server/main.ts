@@ -1,3 +1,5 @@
+import { fileURLToPath } from "node:url";
+import { serve } from "@hono/node-server";
 import db from "./db";
 import { checkApiKey } from "./guard";
 import { createApp } from "./index";
@@ -9,7 +11,6 @@ checkApiKey(apiKey);
 const stores = createSQLiteStores(db);
 const app = createApp(stores, apiKey);
 
-export default {
-	port: Number(process.env.PORT ?? 3000),
-	fetch: app.fetch,
-};
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+	serve({ fetch: app.fetch, port: Number(process.env.PORT ?? 3000) });
+}

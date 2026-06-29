@@ -1,4 +1,6 @@
+import { existsSync, readFileSync } from "node:fs";
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { project } from "../src/engine/projection";
 import type {
 	Account,
@@ -56,6 +58,9 @@ export interface Stores {
 
 export function createApp(stores: Stores, apiKey: string): Hono {
 	const app = new Hono();
+	const corsOrigin = process.env.CORS_ORIGIN ?? "http://localhost:5173";
+
+	app.use("*", cors({ origin: corsOrigin }));
 
 	app.get("/api/health", (c) => c.json({ ok: true }));
 
@@ -235,19 +240,16 @@ export function createApp(stores: Stores, apiKey: string): Hono {
 
 	// --- Static files (production) ---
 
-	app.get("*", async (c) => {
+	app.get("*", (c) => {
 		const distDir = "./dist";
-		const urlPath = c.req.path;
+		const filePath = `${distDir}${c.req.path}`;
 
-		const filePath = `${distDir}${urlPath}`;
-		const file = Bun.file(filePath);
-		if (await file.exists()) {
-			return new Response(file);
+		if (existsSync(filePath)) {
+			return new Response(readFileSync(filePath));
 		}
 
-		const index = Bun.file(`${distDir}/index.html`);
-		if (await index.exists()) {
-			return new Response(index);
+		if (existsSync(`${distDir}/index.html`)) {
+			return new Response(readFileSync(`${distDir}/index.html`));
 		}
 
 		return c.text("Not found", 404);
