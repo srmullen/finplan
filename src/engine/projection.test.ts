@@ -179,6 +179,29 @@ describe("project — Schedule frequencies", () => {
 		expect(last.balance).toBe(1000 + 4 * 300);
 	});
 
+	it("annually schedule does not fire when projection year is before schedule start year", () => {
+		const schedule: Schedule = {
+			id: "s1",
+			sourceId: "external",
+			destinationId: "checking",
+			amount: 1000,
+			estimated: false,
+			frequency: "annually",
+			startDate: "2025-06-01",
+			terminateAtZero: false,
+		};
+		const result = project({
+			accounts: [checking],
+			externalParties: [],
+			schedules: [schedule],
+			adjustments: [],
+			startDate: "2024-01-01",
+			endDate: "2024-12-31",
+		});
+		const last = result.checking!.at(-1)!;
+		expect(last.balance).toBe(1000);
+	});
+
 	it("annually schedule fires once in a year", () => {
 		const schedule: Schedule = {
 			id: "s1",
@@ -417,6 +440,59 @@ describe("project — Adjustments", () => {
 	});
 });
 
+describe("project — Adjustments (sort comparator)", () => {
+	it("uses the most recent of multiple pre-startDate adjustments", () => {
+		const result = project({
+			accounts: [checking],
+			externalParties: [],
+			schedules: [],
+			adjustments: [
+				{ id: "a1", accountId: "checking", date: "2024-01-05", actualBalance: 1500 },
+				{ id: "a2", accountId: "checking", date: "2024-01-10", actualBalance: 2000 },
+			],
+			startDate: "2024-01-15",
+			endDate: "2024-01-15",
+		});
+		// 2024-01-10 is more recent → 2000 should be the opening balance
+		expect(result.checking![0]!.balance).toBe(2000);
+	});
+});
+
+describe("project — amortizing termination with external source", () => {
+	it("caps the final payment when source is external (not tracked)", () => {
+		const loan: Account = {
+			id: "loan",
+			name: "Car Loan",
+			type: "loan",
+			owner: "Sean",
+			seedBalance: -300,
+			seedDate: "2024-01-01",
+			rate: 0,
+			amortizing: true,
+		};
+		const payment: Schedule = {
+			id: "pay",
+			sourceId: "external-party",
+			destinationId: "loan",
+			amount: 200,
+			estimated: false,
+			frequency: "monthly",
+			startDate: "2024-01-15",
+			terminateAtZero: true,
+		};
+		const result = project({
+			accounts: [loan],
+			externalParties: [],
+			schedules: [payment],
+			adjustments: [],
+			startDate: "2024-01-01",
+			endDate: "2024-12-31",
+		});
+		const loanLast = result.loan!.at(-1)!;
+		expect(loanLast.balance).toBe(0);
+	});
+});
+
 describe("project — Scenario overrides", () => {
 	it("a scenario override changes a schedule amount vs the baseline", () => {
 		const schedule: Schedule = {
@@ -447,6 +523,73 @@ describe("project — Scenario overrides", () => {
 		expect(scenarioLast.balance).toBeGreaterThan(baselineLast.balance);
 	});
 
+	it("non-overridden schedules pass through unchanged alongside overridden ones", () => {
+		const s1: Schedule = {
+			id: "s1",
+			sourceId: "external",
+			destinationId: "checking",
+			amount: 500,
+			estimated: false,
+			frequency: "monthly",
+			startDate: "2024-01-01",
+			terminateAtZero: false,
+		};
+		const s2: Schedule = {
+			id: "s2",
+			sourceId: "external",
+			destinationId: "checking",
+			amount: 100,
+			estimated: false,
+			frequency: "monthly",
+			startDate: "2024-01-01",
+			terminateAtZero: false,
+		};
+		const result = project(
+			makeInput({
+				schedules: [s1, s2],
+				scenario: {
+					id: "sc1",
+					name: "Override s1 only",
+					scheduleOverrides: [{ scheduleId: "s1", amount: 1000 }],
+					additionalSchedules: [],
+					additionalAccounts: [],
+				},
+			}),
+		);
+		const last = result.checking!.at(-1)!;
+		// s1 overridden to 1000 + s2 unchanged at 100 = 3300 per 3 months
+		expect(last.balance).toBe(1000 + 3 * (1000 + 100));
+	});
+
+	it("a scenario override with endDate limits the schedule duration", () => {
+		const schedule: Schedule = {
+			id: "s1",
+			sourceId: "external",
+			destinationId: "checking",
+			amount: 500,
+			estimated: false,
+			frequency: "monthly",
+			startDate: "2024-01-01",
+			terminateAtZero: false,
+		};
+		const result = project(
+			makeInput({
+				schedules: [schedule],
+				scenario: {
+					id: "sc1",
+					name: "Short income",
+					scheduleOverrides: [{ scheduleId: "s1", endDate: "2024-01-31" }],
+					additionalSchedules: [],
+					additionalAccounts: [],
+				},
+				endDate: "2024-03-31",
+			}),
+		);
+		const last = result.checking!.at(-1)!;
+		// Only one payment fires before the endDate override cuts off
+		expect(last.balance).toBe(1000 + 500);
+	});
+
 	it("a paused schedule is excluded from the scenario projection", () => {
 		const schedule: Schedule = {
 			id: "s1",
@@ -472,6 +615,46 @@ describe("project — Scenario overrides", () => {
 		);
 		const last = result.checking!.at(-1)!;
 		expect(last.balance).toBe(1000);
+	});
+
+	it("a scenario override with terminateAtZero changes the schedule's terminate flag", () => {
+		const loan: Account = {
+			id: "loan",
+			name: "Car Loan",
+			type: "loan",
+			owner: "Sean",
+			seedBalance: -600,
+			seedDate: "2024-01-01",
+			rate: 0,
+			amortizing: true,
+		};
+		const schedule: Schedule = {
+			id: "s1",
+			sourceId: "checking",
+			destinationId: "loan",
+			amount: 200,
+			estimated: false,
+			frequency: "monthly",
+			startDate: "2024-01-15",
+			terminateAtZero: false,
+		};
+		const result = project({
+			accounts: [checking, loan],
+			externalParties: [],
+			schedules: [schedule],
+			adjustments: [],
+			startDate: "2024-01-01",
+			endDate: "2024-12-31",
+			scenario: {
+				id: "sc1",
+				name: "Early payoff",
+				scheduleOverrides: [{ scheduleId: "s1", terminateAtZero: true }],
+				additionalSchedules: [],
+				additionalAccounts: [],
+			},
+		});
+		const loanLast = result.loan!.at(-1)!;
+		expect(loanLast.balance).toBe(0);
 	});
 
 	it("an additional scenario account appears in the projection results", () => {

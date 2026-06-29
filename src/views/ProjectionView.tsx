@@ -207,6 +207,9 @@ export default function ProjectionView() {
 		});
 	}
 
+	const yAxisTickFormatter = (v: unknown) => formatCurrency(Number(v));
+	const tooltipFormatter = (v: number) => formatCurrency(v);
+
 	return (
 		<div>
 			<div style={styles.header}>
@@ -285,11 +288,11 @@ export default function ProjectionView() {
 							<CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
 							<XAxis dataKey="date" tick={{ fontSize: 11 }} />
 							<YAxis
-								tickFormatter={(v) => formatCurrency(Number(v))}
+								tickFormatter={yAxisTickFormatter}
 								tick={{ fontSize: 11 }}
 								width={90}
 							/>
-							<Tooltip formatter={(v: number) => formatCurrency(v)} />
+							<Tooltip formatter={tooltipFormatter} />
 							<Legend />
 							<ReferenceLine y={0} stroke="#9ca3af" strokeDasharray="4 2" />
 							{milestones.map((m) => (

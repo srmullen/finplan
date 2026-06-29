@@ -75,7 +75,6 @@ function scheduleFiresOn(schedule: Schedule, date: Date): boolean {
 		}
 
 		case "annually": {
-			if (year < start.getUTCFullYear()) return false;
 			const targetDay = Math.min(startDay, daysInMonth(year, month));
 			return month === startMonth && day === targetDay;
 		}
@@ -175,12 +174,12 @@ export function project(input: ProjectionInput): ProjectionResult {
 			const destAccount = accountById.get(destinationId);
 
 			if (terminateAtZero && destAccount?.amortizing) {
-				const destBalance = balances.get(destinationId) ?? 0;
+				const destBalance = balances.get(destinationId)!;
 				if (destBalance >= 0) continue;
 				// Cap transfer so balance doesn't exceed zero
 				const actualAmount = Math.min(amount, -destBalance);
-				if (accountIdSet.has(destinationId))
-					balances.set(destinationId, destBalance + actualAmount);
+				// destinationId is always in accountIdSet when destAccount?.amortizing is true
+				balances.set(destinationId, destBalance + actualAmount);
 				if (accountIdSet.has(sourceId))
 					balances.set(sourceId, balances.get(sourceId)! - actualAmount);
 			} else {
