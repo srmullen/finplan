@@ -11,9 +11,6 @@ import type { Account, ProjectionResult } from "../engine/types";
 
 vi.mock("@src/hooks/useAccounts");
 vi.mock("@src/api/client");
-vi.mock("@src/components/AdjustmentPanel", () => ({
-	default: () => <div data-testid="adjustment-panel" />,
-}));
 let capturedToggleScenario: (id: string) => void = () => {};
 vi.mock("@src/components/ScenarioManager", () => ({
 	default: ({
@@ -135,14 +132,6 @@ describe("ProjectionView — with accounts", () => {
 		);
 	});
 
-	it("fetches both with-adj and no-adj baselines", async () => {
-		render(<ProjectionView />);
-		await act(async () => {});
-		const calls = vi.mocked(get).mock.calls.map(([url]) => url as string);
-		expect(calls.some((u) => u.includes("noAdj=1"))).toBe(true);
-		expect(calls.some((u) => !u.includes("noAdj"))).toBe(true);
-	});
-
 	it("toggles account visibility when checkbox is clicked", async () => {
 		render(<ProjectionView />);
 		await act(async () => {});
@@ -151,21 +140,6 @@ describe("ProjectionView — with accounts", () => {
 		expect((checkbox as HTMLInputElement).checked).toBe(false);
 		fireEvent.click(checkbox);
 		expect((checkbox as HTMLInputElement).checked).toBe(true);
-	});
-
-	it("shows Adjustments panel when Adjustments button is clicked", async () => {
-		render(<ProjectionView />);
-		await act(async () => {});
-		fireEvent.click(screen.getByRole("button", { name: "Adjustments" }));
-		expect(screen.getByTestId("adjustment-panel")).toBeTruthy();
-	});
-
-	it("hides Adjustments panel on second click (toggle)", async () => {
-		render(<ProjectionView />);
-		await act(async () => {});
-		fireEvent.click(screen.getByRole("button", { name: "Adjustments" }));
-		fireEvent.click(screen.getByRole("button", { name: "Adjustments" }));
-		expect(screen.queryByTestId("adjustment-panel")).toBeNull();
 	});
 
 	it("shows Scenarios panel when Scenarios button is clicked", async () => {
@@ -278,8 +252,7 @@ describe("ProjectionView — stale scenario fetch guard", () => {
 		});
 
 		vi.mocked(get)
-			.mockResolvedValueOnce(projectionResult) // initial baseline main
-			.mockResolvedValueOnce(projectionResult) // initial baseline noAdj
+			.mockResolvedValueOnce(projectionResult) // initial baseline
 			.mockReturnValueOnce(staleScenarioFetch) // first (stale) scenario fetch — deferred
 			.mockResolvedValue(projectionResult); // all subsequent fetches
 
@@ -404,8 +377,7 @@ describe("ProjectionView — scenario fetching", () => {
 		};
 
 		vi.mocked(get)
-			.mockResolvedValueOnce(partialBaseline) // baseline main
-			.mockResolvedValueOnce(partialBaseline) // baseline noAdj
+			.mockResolvedValueOnce(partialBaseline) // baseline
 			.mockResolvedValue(partialScenario); // scenario fetch
 
 		render(<ProjectionView />);

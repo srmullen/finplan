@@ -250,4 +250,38 @@ describe("AdjustmentPanel — with adjustments", () => {
 		});
 		expect(mockDeleteAdjustment).toHaveBeenCalledWith("adj-1");
 	});
+
+	it("filters to fixedAccountId when that prop is set", () => {
+		const adj2: Adjustment = {
+			id: "adj-2",
+			accountId: "acc-2",
+			date: "2024-01-16",
+			actualBalance: 500,
+		};
+		mockAdjustments.current = [adjustment, adj2];
+		const accounts2 = [
+			...accounts,
+			{ ...accounts[0]!, id: "acc-2", name: "Savings" },
+		];
+		render(
+			<AdjustmentPanel
+				accounts={accounts2}
+				baselineResult={baselineResult}
+				fixedAccountId="acc-1"
+			/>,
+		);
+		expect(screen.getByText("2024-01-15")).toBeTruthy();
+		expect(screen.queryByText("2024-01-16")).toBeNull();
+	});
+
+	it("hides account picker and filter when fixedAccountId is set", () => {
+		render(
+			<AdjustmentPanel
+				accounts={accounts}
+				baselineResult={baselineResult}
+				fixedAccountId="acc-1"
+			/>,
+		);
+		expect(screen.queryByLabelText("Account")).toBeNull();
+	});
 });

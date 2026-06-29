@@ -9,6 +9,7 @@ import { generateId } from "../utils/id";
 
 interface Props {
 	initial?: Schedule;
+	defaultSourceId?: string;
 	accounts: Account[];
 	externalParties: ExternalParty[];
 	onSave: (schedule: Schedule) => void;
@@ -27,6 +28,7 @@ const FREQUENCIES: Frequency[] = [
 
 export default function ScheduleForm({
 	initial,
+	defaultSourceId,
 	accounts,
 	externalParties,
 	onSave,
@@ -49,7 +51,9 @@ export default function ScheduleForm({
 
 	const firstNodeId = allNodes[0]?.id ?? "";
 
-	const [sourceId, setSourceId] = useState(initial?.sourceId ?? firstNodeId);
+	const [sourceId, setSourceId] = useState(
+		initial?.sourceId ?? defaultSourceId ?? firstNodeId,
+	);
 	const [destinationId, setDestinationId] = useState(
 		initial?.destinationId ?? firstNodeId,
 	);

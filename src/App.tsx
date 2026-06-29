@@ -1,5 +1,6 @@
 import { BrowserRouter, NavLink, Route, Routes } from "react-router-dom";
 import { Toaster } from "sonner";
+import AccountDetailView from "./views/AccountDetailView";
 import AccountsView from "./views/AccountsView";
 import ProjectionView from "./views/ProjectionView";
 import SchedulesView from "./views/SchedulesView";
@@ -19,6 +20,7 @@ export default function App() {
 				<Routes>
 					<Route path="/" element={<ProjectionView />} />
 					<Route path="/accounts" element={<AccountsView />} />
+					<Route path="/accounts/:id" element={<AccountDetailView />} />
 					<Route path="/schedules" element={<SchedulesView />} />
 				</Routes>
 			</main>
