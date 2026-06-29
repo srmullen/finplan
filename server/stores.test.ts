@@ -86,6 +86,11 @@ describe("accounts store", () => {
 		expect(stores.accounts.list()[0]).toMatchObject({ id: "a1" });
 	});
 
+	it("create with amortizing: true", () => {
+		stores.accounts.create({ ...account, amortizing: true });
+		expect(stores.accounts.list()[0]?.amortizing).toBe(true);
+	});
+
 	it("converts amortizing integer 1 to boolean true", () => {
 		db.prepare(
 			"INSERT INTO accounts (id, name, type, owner, seed_balance, seed_date, rate, amortizing) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -121,6 +126,14 @@ describe("accounts store", () => {
 		stores.accounts.create(account);
 		stores.accounts.update({ ...account, name: "Updated" });
 		expect(stores.accounts.get("a1")?.name).toBe("Updated");
+	});
+
+	it("update with institution and amortizing: true", () => {
+		stores.accounts.create(account);
+		stores.accounts.update({ ...account, institution: "Chase", amortizing: true });
+		const updated = stores.accounts.get("a1");
+		expect(updated?.institution).toBe("Chase");
+		expect(updated?.amortizing).toBe(true);
 	});
 
 	it("remove deletes the account", () => {
@@ -185,6 +198,13 @@ describe("schedules store", () => {
 		expect(stores.schedules.list()).toHaveLength(1);
 	});
 
+	it("create with estimated: true and terminateAtZero: true", () => {
+		stores.schedules.create({ ...schedule, id: "s2", estimated: true, terminateAtZero: true });
+		const s = stores.schedules.get("s2");
+		expect(s?.estimated).toBe(true);
+		expect(s?.terminateAtZero).toBe(true);
+	});
+
 	it("includes endDate when present", () => {
 		stores.schedules.create({ ...schedule, endDate: "2024-12-31" });
 		expect(stores.schedules.list()[0]?.endDate).toBe("2024-12-31");
@@ -218,6 +238,20 @@ describe("schedules store", () => {
 		stores.schedules.create(schedule);
 		stores.schedules.update({ ...schedule, amount: 999 });
 		expect(stores.schedules.get("s1")?.amount).toBe(999);
+	});
+
+	it("update with estimated: true, terminateAtZero: true, and endDate", () => {
+		stores.schedules.create(schedule);
+		stores.schedules.update({
+			...schedule,
+			estimated: true,
+			terminateAtZero: true,
+			endDate: "2024-12-31",
+		});
+		const updated = stores.schedules.get("s1");
+		expect(updated?.estimated).toBe(true);
+		expect(updated?.terminateAtZero).toBe(true);
+		expect(updated?.endDate).toBe("2024-12-31");
 	});
 
 	it("remove deletes the schedule", () => {
