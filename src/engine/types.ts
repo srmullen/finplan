@@ -6,7 +6,7 @@ export type AccountType =
 	| "loan"
 	| "other";
 
-export type Owner = "Sean" | "Wife" | "Joint";
+export type Owner = string;
 
 export type Frequency =
 	| "once"
@@ -22,6 +22,7 @@ export interface Account {
 	name: string;
 	type: AccountType;
 	owner: Owner;
+	institution?: string;
 	seedBalance: number;
 	seedDate: string; // ISO date YYYY-MM-DD
 	rate: number; // annual percentage, e.g. 0.08 = 8%, negative for charges

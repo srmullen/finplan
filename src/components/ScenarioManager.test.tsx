@@ -393,6 +393,28 @@ describe("ScenarioManager — additional accounts in editor", () => {
 		fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 		expect(screen.getByRole("button", { name: "+ Add account" })).toBeTruthy();
 	});
+
+	it("populates owner and institution suggestions from existing accounts", () => {
+		vi.mocked(useAccounts).mockReturnValue({
+			accounts: [
+				{ id: "a1", name: "Checking", type: "checking", owner: "Sean", institution: "Chase", seedBalance: 0, seedDate: "2024-01-01", rate: 0, amortizing: false },
+				{ id: "a2", name: "Savings", type: "savings", owner: "Wife", seedBalance: 0, seedDate: "2024-01-01", rate: 0, amortizing: false },
+			],
+			addAccount: vi.fn(), updateAccount: vi.fn(), deleteAccount: vi.fn(), refresh: vi.fn(), error: null,
+		} as ReturnType<typeof useAccounts>);
+		render(<ScenarioManager activeScenarioIds={new Set()} onToggleScenario={onToggleScenario} />);
+		fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+		fireEvent.click(screen.getByRole("button", { name: "+ Add account" }));
+		const ownerOpts = [...document.querySelectorAll("#owner-suggestions option")].map(
+			(o) => (o as HTMLOptionElement).value,
+		);
+		expect(ownerOpts).toContain("Sean");
+		expect(ownerOpts).toContain("Wife");
+		const instOpts = [...document.querySelectorAll("#institution-suggestions option")].map(
+			(o) => (o as HTMLOptionElement).value,
+		);
+		expect(instOpts).toContain("Chase");
+	});
 });
 
 describe("ScenarioManager — additional accounts chip removal", () => {

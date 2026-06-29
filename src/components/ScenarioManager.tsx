@@ -215,6 +215,14 @@ function ScenarioEditor({
 				))}
 				{addingAccount ? (
 					<AccountForm
+						ownerSuggestions={[
+							...new Set(accounts.map((a) => a.owner).filter(Boolean)),
+						].sort()}
+						institutionSuggestions={[
+							...new Set(
+								accounts.map((a) => a.institution ?? "").filter(Boolean),
+							),
+						].sort()}
 						onSave={addAccount}
 						onCancel={() => setAddingAccount(false)}
 					/>

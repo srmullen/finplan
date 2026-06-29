@@ -41,7 +41,8 @@ function rowToAccount(row: Record<string, unknown>): Account {
 		id: row.id as string,
 		name: row.name as string,
 		type: row.type as Account["type"],
-		owner: row.owner as Account["owner"],
+		owner: row.owner as string,
+		institution: (row.institution as string) || undefined,
 		seedBalance: row.seed_balance as number,
 		seedDate: row.seed_date as string,
 		rate: row.rate as number,
@@ -60,12 +61,13 @@ app.get("/api/accounts", (c) => {
 app.post("/api/accounts", async (c) => {
 	const body = await c.req.json<Account>();
 	db.prepare(
-		"INSERT INTO accounts (id, name, type, owner, seed_balance, seed_date, rate, amortizing) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+		"INSERT INTO accounts (id, name, type, owner, institution, seed_balance, seed_date, rate, amortizing) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
 	).run(
 		body.id,
 		body.name,
 		body.type,
 		body.owner,
+		body.institution ?? "",
 		body.seedBalance,
 		body.seedDate,
 		body.rate,
@@ -87,11 +89,12 @@ app.put("/api/accounts/:id", async (c) => {
 	if (body.id !== c.req.param("id"))
 		return c.json({ error: "ID mismatch" }, 400);
 	db.prepare(
-		"UPDATE accounts SET name = ?, type = ?, owner = ?, seed_balance = ?, seed_date = ?, rate = ?, amortizing = ? WHERE id = ?",
+		"UPDATE accounts SET name = ?, type = ?, owner = ?, institution = ?, seed_balance = ?, seed_date = ?, rate = ?, amortizing = ? WHERE id = ?",
 	).run(
 		body.name,
 		body.type,
 		body.owner,
+		body.institution ?? "",
 		body.seedBalance,
 		body.seedDate,
 		body.rate,

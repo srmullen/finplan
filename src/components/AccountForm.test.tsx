@@ -13,6 +13,13 @@ afterEach(() => {
 const onSave = vi.fn();
 const onCancel = vi.fn();
 
+const defaultProps = {
+	ownerSuggestions: ["Sean", "Wife"],
+	institutionSuggestions: ["Chase", "Fidelity"],
+	onSave,
+	onCancel,
+};
+
 const existingAccount: Account = {
 	id: "acc-1",
 	name: "Checking",
@@ -26,12 +33,12 @@ const existingAccount: Account = {
 
 describe("AccountForm — add mode (no initial)", () => {
 	it("renders 'Add account' button when no initial provided", () => {
-		render(<AccountForm onSave={onSave} onCancel={onCancel} />);
+		render(<AccountForm {...defaultProps} />);
 		expect(screen.getByRole("button", { name: "Add account" })).toBeTruthy();
 	});
 
 	it("calls onSave with a generated id and default values on submit", () => {
-		render(<AccountForm onSave={onSave} onCancel={onCancel} />);
+		render(<AccountForm {...defaultProps} />);
 		fireEvent.change(screen.getByLabelText("Name"), { target: { value: "My Account" } });
 		fireEvent.submit(screen.getByRole("button", { name: "Add account" }).closest("form")!);
 		expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
@@ -43,7 +50,7 @@ describe("AccountForm — add mode (no initial)", () => {
 	});
 
 	it("parses non-zero seedBalance and rate on submit", () => {
-		render(<AccountForm onSave={onSave} onCancel={onCancel} />);
+		render(<AccountForm {...defaultProps} />);
 		fireEvent.change(screen.getByLabelText("Name"), { target: { value: "IRA" } });
 		fireEvent.change(screen.getByLabelText("Seed balance ($)"), { target: { value: "10000" } });
 		fireEvent.change(screen.getByLabelText("Annual rate (%)"), { target: { value: "8" } });
@@ -55,31 +62,69 @@ describe("AccountForm — add mode (no initial)", () => {
 	});
 
 	it("calls onCancel when Cancel is clicked", () => {
-		render(<AccountForm onSave={onSave} onCancel={onCancel} />);
+		render(<AccountForm {...defaultProps} />);
 		fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 		expect(onCancel).toHaveBeenCalled();
+	});
+
+	it("sets institution to undefined when left blank", () => {
+		render(<AccountForm {...defaultProps} />);
+		fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Blank" } });
+		fireEvent.submit(screen.getByRole("button", { name: "Add account" }).closest("form")!);
+		expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ institution: undefined }));
+	});
+
+	it("sets institution when provided", () => {
+		render(<AccountForm {...defaultProps} />);
+		fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Savings" } });
+		fireEvent.change(screen.getByLabelText("Institution"), { target: { value: "Chase" } });
+		fireEvent.submit(screen.getByRole("button", { name: "Add account" }).closest("form")!);
+		expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ institution: "Chase" }));
+	});
+
+	it("renders owner datalist options from ownerSuggestions", () => {
+		render(<AccountForm {...defaultProps} />);
+		const opts = [...document.querySelectorAll("#owner-suggestions option")].map(
+			(o) => (o as HTMLOptionElement).value,
+		);
+		expect(opts).toContain("Sean");
+		expect(opts).toContain("Wife");
+	});
+
+	it("renders institution datalist options from institutionSuggestions", () => {
+		render(<AccountForm {...defaultProps} />);
+		const opts = [...document.querySelectorAll("#institution-suggestions option")].map(
+			(o) => (o as HTMLOptionElement).value,
+		);
+		expect(opts).toContain("Chase");
+		expect(opts).toContain("Fidelity");
 	});
 });
 
 describe("AccountForm — edit mode (with initial)", () => {
 	it("renders 'Save changes' button when initial is provided", () => {
-		render(<AccountForm initial={existingAccount} onSave={onSave} onCancel={onCancel} />);
+		render(<AccountForm {...defaultProps} initial={existingAccount} />);
 		expect(screen.getByRole("button", { name: "Save changes" })).toBeTruthy();
 	});
 
 	it("pre-fills fields from initial account", () => {
-		render(<AccountForm initial={existingAccount} onSave={onSave} onCancel={onCancel} />);
+		render(<AccountForm {...defaultProps} initial={existingAccount} />);
 		expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe("Checking");
 	});
 
+	it("pre-fills institution when initial has one", () => {
+		render(<AccountForm {...defaultProps} initial={{ ...existingAccount, institution: "Navy Federal" }} />);
+		expect((screen.getByLabelText("Institution") as HTMLInputElement).value).toBe("Navy Federal");
+	});
+
 	it("calls onSave with original id on submit", () => {
-		render(<AccountForm initial={existingAccount} onSave={onSave} onCancel={onCancel} />);
+		render(<AccountForm {...defaultProps} initial={existingAccount} />);
 		fireEvent.submit(screen.getByRole("button", { name: "Save changes" }).closest("form")!);
 		expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ id: "acc-1" }));
 	});
 
 	it("toggles the amortizing checkbox", () => {
-		render(<AccountForm initial={existingAccount} onSave={onSave} onCancel={onCancel} />);
+		render(<AccountForm {...defaultProps} initial={existingAccount} />);
 		const checkbox = screen.getByRole("checkbox");
 		expect((checkbox as HTMLInputElement).checked).toBe(true);
 		fireEvent.click(checkbox);
@@ -88,7 +133,7 @@ describe("AccountForm — edit mode (with initial)", () => {
 	});
 
 	it("updates type when type select is changed", () => {
-		render(<AccountForm onSave={onSave} onCancel={onCancel} />);
+		render(<AccountForm {...defaultProps} />);
 		fireEvent.change(screen.getByLabelText("Type"), { target: { value: "savings" } });
 		fireEvent.change(screen.getByLabelText("Name"), { target: { value: "My Savings" } });
 		fireEvent.submit(screen.getByRole("button", { name: "Add account" }).closest("form")!);
@@ -96,7 +141,7 @@ describe("AccountForm — edit mode (with initial)", () => {
 	});
 
 	it("updates owner when owner select is changed", () => {
-		render(<AccountForm onSave={onSave} onCancel={onCancel} />);
+		render(<AccountForm {...defaultProps} />);
 		fireEvent.change(screen.getByLabelText("Owner"), { target: { value: "Wife" } });
 		fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Her Account" } });
 		fireEvent.submit(screen.getByRole("button", { name: "Add account" }).closest("form")!);
@@ -104,7 +149,7 @@ describe("AccountForm — edit mode (with initial)", () => {
 	});
 
 	it("updates seed date when date input is changed", () => {
-		render(<AccountForm onSave={onSave} onCancel={onCancel} />);
+		render(<AccountForm {...defaultProps} />);
 		fireEvent.change(screen.getByLabelText("As of date"), { target: { value: "2025-06-01" } });
 		fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Dated Account" } });
 		fireEvent.submit(screen.getByRole("button", { name: "Add account" }).closest("form")!);
