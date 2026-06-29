@@ -1,21 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type {
+	Account,
+	Adjustment,
+	ExternalParty,
+	Scenario,
+	Schedule,
+} from "../src/engine/types";
+import { createApp } from "./index";
+import type {
+	AccountStore,
+	AdjustmentStore,
+	ExternalPartyStore,
+	ScenarioStore,
+	ScheduleStore,
+	Stores,
+} from "./index";
 
-const { mockRun, mockGet, mockAll, mockExistsSync, mockReadFileSync } =
-	vi.hoisted(() => ({
-		mockRun: vi.fn(),
-		mockGet: vi.fn().mockReturnValue(null),
-		mockAll: vi.fn().mockReturnValue([]),
-		mockExistsSync: vi.fn().mockReturnValue(false),
-		mockReadFileSync: vi.fn().mockReturnValue(Buffer.from("")),
-	}));
-
-vi.mock("better-sqlite3", () => ({
-	default: class {
-		exec() {}
-		prepare() {
-			return { run: mockRun, get: mockGet, all: mockAll };
-		}
-	},
+const { mockExistsSync, mockReadFileSync } = vi.hoisted(() => ({
+	mockExistsSync: vi.fn().mockReturnValue(false),
+	mockReadFileSync: vi.fn().mockReturnValue(Buffer.from("")),
 }));
 
 vi.mock("node:fs", () => ({
@@ -23,19 +26,111 @@ vi.mock("node:fs", () => ({
 	readFileSync: mockReadFileSync,
 }));
 
-const mockExit = vi.hoisted(() => {
-	process.env.FINPLAN_API_KEY = "test-key";
-	const fn = vi.fn();
-	process.exit = fn as unknown as typeof process.exit;
-	return fn;
-});
+function makeAccountStore(): AccountStore {
+	const items: Account[] = [];
+	return {
+		list: () => [...items],
+		get: (id) => items.find((a) => a.id === id) ?? null,
+		create: (a) => {
+			items.push(a);
+		},
+		update: (a) => {
+			const i = items.findIndex((x) => x.id === a.id);
+			if (i >= 0) items[i] = a;
+		},
+		remove: (id) => {
+			const i = items.findIndex((x) => x.id === id);
+			if (i >= 0) items.splice(i, 1);
+		},
+	};
+}
 
-import server from "./index";
+function makePartyStore(): ExternalPartyStore {
+	const items: ExternalParty[] = [];
+	return {
+		list: () => [...items],
+		get: (id) => items.find((p) => p.id === id) ?? null,
+		create: (p) => {
+			items.push(p);
+		},
+		update: (p) => {
+			const i = items.findIndex((x) => x.id === p.id);
+			if (i >= 0) items[i] = p;
+		},
+		remove: (id) => {
+			const i = items.findIndex((x) => x.id === id);
+			if (i >= 0) items.splice(i, 1);
+		},
+	};
+}
+
+function makeScheduleStore(): ScheduleStore {
+	const items: Schedule[] = [];
+	return {
+		list: () => [...items],
+		get: (id) => items.find((s) => s.id === id) ?? null,
+		create: (s) => {
+			items.push(s);
+		},
+		update: (s) => {
+			const i = items.findIndex((x) => x.id === s.id);
+			if (i >= 0) items[i] = s;
+		},
+		remove: (id) => {
+			const i = items.findIndex((x) => x.id === id);
+			if (i >= 0) items.splice(i, 1);
+		},
+	};
+}
+
+function makeAdjustmentStore(): AdjustmentStore {
+	const items: Adjustment[] = [];
+	return {
+		list: () => [...items],
+		create: (a) => {
+			items.push(a);
+		},
+		remove: (id) => {
+			const i = items.findIndex((x) => x.id === id);
+			if (i >= 0) items.splice(i, 1);
+		},
+	};
+}
+
+function makeScenarioStore(): ScenarioStore {
+	const items: Scenario[] = [];
+	return {
+		list: () => [...items],
+		get: (id) => items.find((s) => s.id === id) ?? null,
+		create: (s) => {
+			items.push(s);
+		},
+		update: (s) => {
+			const i = items.findIndex((x) => x.id === s.id);
+			if (i >= 0) items[i] = s;
+		},
+		remove: (id) => {
+			const i = items.findIndex((x) => x.id === id);
+			if (i >= 0) items.splice(i, 1);
+		},
+	};
+}
+
+function makeStores(): Stores {
+	return {
+		accounts: makeAccountStore(),
+		parties: makePartyStore(),
+		schedules: makeScheduleStore(),
+		adjustments: makeAdjustmentStore(),
+		scenarios: makeScenarioStore(),
+	};
+}
 
 const AUTH = "Bearer test-key";
+const app = createApp(makeStores(), "test-key");
 
 function req(path: string, method = "GET", body?: unknown) {
-	return server.fetch(
+	return app.fetch(
 		new Request(`http://localhost${path}`, {
 			method,
 			headers: {
@@ -47,53 +142,10 @@ function req(path: string, method = "GET", body?: unknown) {
 	);
 }
 
-const accountRow = {
-	id: "acc-1",
-	name: "Checking",
-	type: "checking",
-	owner: "Sean",
-	seed_balance: 1000,
-	seed_date: "2024-01-01",
-	rate: 0,
-	amortizing: 1,
-};
-
-const scheduleRow = {
-	id: "s-1",
-	source_id: "party-1",
-	destination_id: "acc-1",
-	amount: 500,
-	estimated: 0,
-	frequency: "monthly",
-	start_date: "2024-01-01",
-	end_date: "2024-12-31",
-	terminate_at_zero: 0,
-};
-
-const scheduleRowNoEndDate = { ...scheduleRow, id: "s-2", end_date: null };
-
-const partyRow = { id: "party-1", name: "Employer" };
-
-const adjustmentRow = {
-	id: "adj-1",
-	account_id: "acc-1",
-	date: "2024-01-15",
-	actual_balance: 2000,
-};
-
-const scenarioRow = {
-	id: "sc-1",
-	name: "Test",
-	schedule_overrides: "[]",
-	additional_schedules: "[]",
-	additional_accounts: "[]",
-};
-
 beforeEach(() => {
 	vi.clearAllMocks();
-	mockRun.mockReturnValue(undefined);
-	mockGet.mockReturnValue(null);
-	mockAll.mockReturnValue([]);
+	mockExistsSync.mockReturnValue(false);
+	mockReadFileSync.mockReturnValue(Buffer.from(""));
 });
 
 afterEach(() => {
@@ -102,13 +154,13 @@ afterEach(() => {
 
 describe("GET /api/health", () => {
 	it("returns 200 { ok: true } without Authorization header", async () => {
-		const res = await server.fetch(new Request("http://localhost/api/health"));
+		const res = await app.fetch(new Request("http://localhost/api/health"));
 		expect(res.status).toBe(200);
 		expect(await res.json()).toEqual({ ok: true });
 	});
 
 	it("returns 401 for other /api/* routes without Authorization", async () => {
-		const res = await server.fetch(
+		const res = await app.fetch(
 			new Request("http://localhost/api/accounts"),
 		);
 		expect(res.status).toBe(401);
@@ -120,20 +172,6 @@ describe("GET /api/accounts", () => {
 		const res = await req("/api/accounts");
 		expect(res.status).toBe(200);
 		expect(await res.json()).toEqual([]);
-	});
-
-	it("maps rows to account objects (amortizing=true)", async () => {
-		mockAll.mockReturnValueOnce([accountRow]);
-		const res = await req("/api/accounts");
-		const data = (await res.json()) as { amortizing: boolean }[];
-		expect(data[0]?.amortizing).toBe(true);
-	});
-
-	it("maps rows to account objects (amortizing=false)", async () => {
-		mockAll.mockReturnValueOnce([{ ...accountRow, amortizing: 0 }]);
-		const res = await req("/api/accounts");
-		const data = (await res.json()) as { amortizing: boolean }[];
-		expect(data[0]?.amortizing).toBe(false);
 	});
 });
 
@@ -151,7 +189,6 @@ describe("POST /api/accounts", () => {
 		};
 		const res = await req("/api/accounts", "POST", body);
 		expect(res.status).toBe(201);
-		expect(mockRun).toHaveBeenCalled();
 	});
 
 	it("inserts amortizing account and returns 201", async () => {
@@ -177,8 +214,23 @@ describe("GET /api/accounts/:id", () => {
 	});
 
 	it("returns account when found", async () => {
-		mockGet.mockReturnValueOnce(accountRow);
-		const res = await req("/api/accounts/acc-1");
+		const stores = makeStores();
+		stores.accounts.create({
+			id: "acc-1",
+			name: "Checking",
+			type: "checking",
+			owner: "Sean",
+			seedBalance: 1000,
+			seedDate: "2024-01-01",
+			rate: 0,
+			amortizing: false,
+		});
+		const a = createApp(stores, "test-key");
+		const res = await a.fetch(
+			new Request("http://localhost/api/accounts/acc-1", {
+				headers: { Authorization: AUTH },
+			}),
+		);
 		expect(res.status).toBe(200);
 		const data = (await res.json()) as { id: string };
 		expect(data.id).toBe("acc-1");
@@ -223,7 +275,6 @@ describe("DELETE /api/accounts/:id", () => {
 	it("returns 204", async () => {
 		const res = await req("/api/accounts/acc-1", "DELETE");
 		expect(res.status).toBe(204);
-		expect(mockRun).toHaveBeenCalled();
 	});
 });
 
@@ -232,13 +283,6 @@ describe("GET /api/external-parties", () => {
 		const res = await req("/api/external-parties");
 		expect(res.status).toBe(200);
 		expect(await res.json()).toEqual([]);
-	});
-
-	it("maps rows to party objects", async () => {
-		mockAll.mockReturnValueOnce([partyRow]);
-		const res = await req("/api/external-parties");
-		const data = (await res.json()) as { id: string }[];
-		expect(data[0]?.id).toBe("party-1");
 	});
 });
 
@@ -259,8 +303,14 @@ describe("GET /api/external-parties/:id", () => {
 	});
 
 	it("returns party when found", async () => {
-		mockGet.mockReturnValueOnce(partyRow);
-		const res = await req("/api/external-parties/party-1");
+		const stores = makeStores();
+		stores.parties.create({ id: "party-1", name: "Employer" });
+		const a = createApp(stores, "test-key");
+		const res = await a.fetch(
+			new Request("http://localhost/api/external-parties/party-1", {
+				headers: { Authorization: AUTH },
+			}),
+		);
 		expect(res.status).toBe(200);
 	});
 });
@@ -293,20 +343,6 @@ describe("GET /api/schedules", () => {
 	it("returns empty array", async () => {
 		const res = await req("/api/schedules");
 		expect(res.status).toBe(200);
-	});
-
-	it("maps rows with end_date", async () => {
-		mockAll.mockReturnValueOnce([scheduleRow]);
-		const res = await req("/api/schedules");
-		const data = (await res.json()) as { endDate?: string }[];
-		expect(data[0]?.endDate).toBe("2024-12-31");
-	});
-
-	it("omits endDate when end_date is null", async () => {
-		mockAll.mockReturnValueOnce([scheduleRowNoEndDate]);
-		const res = await req("/api/schedules");
-		const data = (await res.json()) as { endDate?: string }[];
-		expect(data[0]?.endDate).toBeUndefined();
 	});
 });
 
@@ -349,8 +385,23 @@ describe("GET /api/schedules/:id", () => {
 	});
 
 	it("returns schedule when found", async () => {
-		mockGet.mockReturnValueOnce(scheduleRow);
-		const res = await req("/api/schedules/s-1");
+		const stores = makeStores();
+		stores.schedules.create({
+			id: "s-1",
+			sourceId: "party-1",
+			destinationId: "acc-1",
+			amount: 500,
+			estimated: false,
+			frequency: "monthly",
+			startDate: "2024-01-01",
+			terminateAtZero: false,
+		});
+		const a = createApp(stores, "test-key");
+		const res = await a.fetch(
+			new Request("http://localhost/api/schedules/s-1", {
+				headers: { Authorization: AUTH },
+			}),
+		);
 		expect(res.status).toBe(200);
 	});
 });
@@ -402,13 +453,6 @@ describe("GET /api/adjustments", () => {
 		const res = await req("/api/adjustments");
 		expect(res.status).toBe(200);
 	});
-
-	it("maps adjustment rows", async () => {
-		mockAll.mockReturnValueOnce([adjustmentRow]);
-		const res = await req("/api/adjustments");
-		const data = (await res.json()) as { accountId: string }[];
-		expect(data[0]?.accountId).toBe("acc-1");
-	});
 });
 
 describe("POST /api/adjustments", () => {
@@ -436,50 +480,6 @@ describe("GET /api/scenarios", () => {
 		const res = await req("/api/scenarios");
 		expect(res.status).toBe(200);
 	});
-
-	it("parses valid JSON columns", async () => {
-		mockAll.mockReturnValueOnce([scenarioRow]);
-		const res = await req("/api/scenarios");
-		const data = (await res.json()) as { scheduleOverrides: unknown[] }[];
-		expect(data[0]?.scheduleOverrides).toEqual([]);
-	});
-
-	it("returns [] for null column values in safeParseArray", async () => {
-		mockAll.mockReturnValueOnce([
-			{ ...scenarioRow, schedule_overrides: null, additional_schedules: null },
-		]);
-		const res = await req("/api/scenarios");
-		const data = (await res.json()) as { scheduleOverrides: unknown[] }[];
-		expect(data[0]?.scheduleOverrides).toEqual([]);
-	});
-
-	it("returns [] for empty string column values in safeParseArray", async () => {
-		mockAll.mockReturnValueOnce([{ ...scenarioRow, schedule_overrides: "" }]);
-		const res = await req("/api/scenarios");
-		const data = (await res.json()) as { scheduleOverrides: unknown[] }[];
-		expect(data[0]?.scheduleOverrides).toEqual([]);
-	});
-
-	it("returns [] when JSON parses to a non-array in safeParseArray", async () => {
-		mockAll.mockReturnValueOnce([
-			{ ...scenarioRow, schedule_overrides: '{"key":"value"}' },
-		]);
-		const res = await req("/api/scenarios");
-		const data = (await res.json()) as { scheduleOverrides: unknown[] }[];
-		expect(data[0]?.scheduleOverrides).toEqual([]);
-	});
-
-	it("returns [] and warns when JSON is invalid in safeParseArray", async () => {
-		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-		mockAll.mockReturnValueOnce([
-			{ ...scenarioRow, schedule_overrides: "invalid-json" },
-		]);
-		const res = await req("/api/scenarios");
-		const data = (await res.json()) as { scheduleOverrides: unknown[] }[];
-		expect(data[0]?.scheduleOverrides).toEqual([]);
-		expect(warn).toHaveBeenCalled();
-		warn.mockRestore();
-	});
 });
 
 describe("POST /api/scenarios", () => {
@@ -503,8 +503,20 @@ describe("GET /api/scenarios/:id", () => {
 	});
 
 	it("returns scenario when found", async () => {
-		mockGet.mockReturnValueOnce(scenarioRow);
-		const res = await req("/api/scenarios/sc-1");
+		const stores = makeStores();
+		stores.scenarios.create({
+			id: "sc-1",
+			name: "Test",
+			scheduleOverrides: [],
+			additionalSchedules: [],
+			additionalAccounts: [],
+		});
+		const a = createApp(stores, "test-key");
+		const res = await a.fetch(
+			new Request("http://localhost/api/scenarios/sc-1", {
+				headers: { Authorization: AUTH },
+			}),
+		);
 		expect(res.status).toBe(200);
 	});
 });
@@ -544,7 +556,7 @@ describe("GET /api/projection", () => {
 		"http://localhost/api/projection?startDate=2024-01-01&endDate=2024-12-31";
 
 	it("returns 400 when startDate is missing", async () => {
-		const res = await server.fetch(
+		const res = await app.fetch(
 			new Request("http://localhost/api/projection?endDate=2024-12-31", {
 				headers: { Authorization: AUTH },
 			}),
@@ -554,7 +566,7 @@ describe("GET /api/projection", () => {
 	});
 
 	it("returns 400 when endDate is missing", async () => {
-		const res = await server.fetch(
+		const res = await app.fetch(
 			new Request("http://localhost/api/projection?startDate=2024-01-01", {
 				headers: { Authorization: AUTH },
 			}),
@@ -563,21 +575,21 @@ describe("GET /api/projection", () => {
 	});
 
 	it("returns 200 for baseline projection without scenarioId", async () => {
-		const res = await server.fetch(
+		const res = await app.fetch(
 			new Request(base, { headers: { Authorization: AUTH } }),
 		);
 		expect(res.status).toBe(200);
 	});
 
 	it("returns 200 with noAdj=1 parameter", async () => {
-		const res = await server.fetch(
+		const res = await app.fetch(
 			new Request(`${base}&noAdj=1`, { headers: { Authorization: AUTH } }),
 		);
 		expect(res.status).toBe(200);
 	});
 
 	it("returns 404 with error body when scenarioId is not found", async () => {
-		const res = await server.fetch(
+		const res = await app.fetch(
 			new Request(`${base}&scenarioId=nonexistent`, {
 				headers: { Authorization: AUTH },
 			}),
@@ -587,8 +599,16 @@ describe("GET /api/projection", () => {
 	});
 
 	it("returns 200 with a valid scenarioId", async () => {
-		mockGet.mockReturnValueOnce(scenarioRow);
-		const res = await server.fetch(
+		const stores = makeStores();
+		stores.scenarios.create({
+			id: "sc-1",
+			name: "Test",
+			scheduleOverrides: [],
+			additionalSchedules: [],
+			additionalAccounts: [],
+		});
+		const a = createApp(stores, "test-key");
+		const res = await a.fetch(
 			new Request(`${base}&scenarioId=sc-1`, {
 				headers: { Authorization: AUTH },
 			}),
@@ -600,25 +620,19 @@ describe("GET /api/projection", () => {
 describe("GET * — static file handler", () => {
 	it("returns 404 when neither the file nor index.html exists", async () => {
 		mockExistsSync.mockReturnValue(false);
-		const res = await server.fetch(new Request("http://localhost/some-route"));
+		const res = await app.fetch(new Request("http://localhost/some-route"));
 		expect(res.status).toBe(404);
 	});
 
 	it("returns 200 when the requested file exists", async () => {
 		mockExistsSync.mockReturnValueOnce(true);
-		const res = await server.fetch(new Request("http://localhost/app.js"));
+		const res = await app.fetch(new Request("http://localhost/app.js"));
 		expect(res.status).toBe(200);
 	});
 
 	it("returns index.html when file does not exist but index.html does", async () => {
 		mockExistsSync.mockReturnValueOnce(false).mockReturnValueOnce(true);
-		const res = await server.fetch(new Request("http://localhost/deep/route"));
+		const res = await app.fetch(new Request("http://localhost/deep/route"));
 		expect(res.status).toBe(200);
-	});
-});
-
-describe("startup guard — FINPLAN_API_KEY set", () => {
-	it("does not exit when FINPLAN_API_KEY is set to a non-empty string", () => {
-		expect(mockExit).not.toHaveBeenCalled();
 	});
 });

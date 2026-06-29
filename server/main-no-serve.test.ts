@@ -27,17 +27,16 @@ vi.mock("node:fs", () => ({
 }));
 
 vi.hoisted(() => {
-	process.env.FINPLAN_API_KEY = "test-key";
-	process.argv[1] = "/fake/server/main.ts";
+	delete process.env.FINPLAN_API_KEY;
+	vi.spyOn(process, "exit").mockImplementation((() => {}) as () => never);
+	// argv[1] is intentionally different from fileURLToPath's return value
+	process.argv[1] = "/some/other/script.ts";
 });
 
 import "./main";
 
-describe("server startup — starts when run directly", () => {
-	it("calls serve with app.fetch and the configured port", () => {
-		expect(mockServe).toHaveBeenCalledOnce();
-		expect(mockServe).toHaveBeenCalledWith(
-			expect.objectContaining({ port: 3000 }),
-		);
+describe("main — imported as module (not entry point)", () => {
+	it("does not call serve when not run directly", () => {
+		expect(mockServe).not.toHaveBeenCalled();
 	});
 });
