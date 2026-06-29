@@ -15,7 +15,7 @@
 		"typecheck:server": "tsc -p tsconfig.server.json --noEmit",
 		"check": "biome check .",
 		"fix": "biome check --write .",
-		"server": "tsx server/index.ts",
+		"server": "tsx --env-file=.env server/index.ts",
 		"ci": "dagger call ci --source=."
 	},
 	"dependencies": {
