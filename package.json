@@ -9,15 +9,18 @@
 		"preview": "vite preview",
 		"test": "vitest",
 		"test:run": "vitest run",
+		"test:coverage": "vitest run --coverage",
 		"test:server": "vitest run server",
 		"typecheck": "tsc --noEmit",
 		"typecheck:server": "tsc -p tsconfig.server.json --noEmit",
 		"check": "biome check .",
 		"fix": "biome check --write .",
-		"server": "bun run server/index.ts",
+		"server": "tsx --env-file=.env server/index.ts",
 		"ci": "dagger call ci --source=."
 	},
 	"dependencies": {
+		"@hono/node-server": "^2.0.6",
+		"better-sqlite3": "^12.11.1",
 		"hono": "^4.12.26",
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1",
@@ -27,12 +30,17 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.1",
-		"@types/bun": "^1.3.14",
+		"@testing-library/react": "^16.3.2",
+		"@testing-library/user-event": "^14.6.1",
+		"@types/better-sqlite3": "^7.6.13",
 		"@types/react": "^18.3.12",
 		"@types/react-dom": "^18.3.1",
 		"@vitejs/plugin-react": "^4.3.3",
+		"@vitest/coverage-istanbul": "3",
+		"jsdom": "^29.1.1",
+		"tsx": "^4.22.4",
 		"typescript": "~5.6.2",
 		"vite": "^6.0.5",
-		"vitest": "^2.1.8"
+		"vitest": "^3.0.0"
 	}
 }

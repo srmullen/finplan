@@ -1,4 +1,8 @@
+import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { serve } from "@hono/node-server";
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { project } from "../src/engine/projection";
 import type {
 	Account,
@@ -11,6 +15,9 @@ import db from "./db";
 
 const app = new Hono();
 const API_KEY = process.env.FINPLAN_API_KEY ?? "";
+const CORS_ORIGIN = process.env.CORS_ORIGIN ?? "http://localhost:5173";
+
+app.use("*", cors({ origin: CORS_ORIGIN }));
 
 if (!API_KEY) {
 	console.error("Error: FINPLAN_API_KEY is not set. Refusing to start.");
@@ -393,25 +400,23 @@ app.get("/api/projection", async (c) => {
 
 // --- Static files (production) ---
 
-app.get("*", async (c) => {
+app.get("*", (c) => {
 	const distDir = "./dist";
-	const urlPath = c.req.path;
+	const filePath = `${distDir}${c.req.path}`;
 
-	const filePath = `${distDir}${urlPath}`;
-	const file = Bun.file(filePath);
-	if (await file.exists()) {
-		return new Response(file);
+	if (existsSync(filePath)) {
+		return new Response(readFileSync(filePath));
 	}
 
-	const index = Bun.file(`${distDir}/index.html`);
-	if (await index.exists()) {
-		return new Response(index);
+	if (existsSync(`${distDir}/index.html`)) {
+		return new Response(readFileSync(`${distDir}/index.html`));
 	}
 
 	return c.text("Not found", 404);
 });
 
-export default {
-	port: Number(process.env.PORT ?? 3000),
-	fetch: app.fetch,
-};
+export default { fetch: app.fetch };
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+	serve({ fetch: app.fetch, port: Number(process.env.PORT ?? 3000) });
+}

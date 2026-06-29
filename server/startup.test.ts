@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("bun:sqlite", () => ({
-	Database: class {
-		run() {}
+vi.mock("better-sqlite3", () => ({
+	default: class {
+		exec() {}
 		prepare() {
 			return { run: () => {}, get: () => null, all: () => [] };
 		}

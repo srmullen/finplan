@@ -63,22 +63,19 @@ function ScenarioEditor({
 		const existing = scenario.scheduleOverrides.find(
 			(o) => o.scheduleId === scheduleId,
 		);
-		let newOverrides: ScheduleOverride[];
+		let newOverrides: ScheduleOverride[] = scenario.scheduleOverrides;
 		if (Number.isNaN(val)) {
-			if (existing) {
-				const updated = { ...existing };
-				delete updated.amount;
-				if (Object.keys(updated).length === 1) {
-					newOverrides = scenario.scheduleOverrides.filter(
-						(o) => o.scheduleId !== scheduleId,
-					);
-				} else {
-					newOverrides = scenario.scheduleOverrides.map((o) =>
-						o.scheduleId === scheduleId ? updated : o,
-					);
-				}
+			if (!existing) return;
+			const updated = { ...existing };
+			delete updated.amount;
+			if (Object.keys(updated).length === 1) {
+				newOverrides = scenario.scheduleOverrides.filter(
+					(o) => o.scheduleId !== scheduleId,
+				);
 			} else {
-				newOverrides = scenario.scheduleOverrides;
+				newOverrides = scenario.scheduleOverrides.map((o) =>
+					o.scheduleId === scheduleId ? updated : o,
+				);
 			}
 		} else if (existing) {
 			newOverrides = scenario.scheduleOverrides.map((o) =>
@@ -176,9 +173,8 @@ function ScenarioEditor({
 										</td>
 										<td>
 											<input
-												type="number"
-												step="0.01"
-												min="0"
+												type="text"
+												inputMode="decimal"
 												placeholder={String(s.amount)}
 												value={ov?.amount ?? ""}
 												onChange={(e) =>

@@ -2,7 +2,14 @@
 	"$schema": "https://biomejs.dev/schemas/2.5.1/schema.json",
 	"files": {
 		"ignoreUnknown": true,
-		"includes": ["**", "!dagger/sdk", "!dist"]
+		"includes": [
+			"**",
+			"!dagger/sdk",
+			"!dist",
+			"!coverage",
+			"!**/*.test.ts",
+			"!**/*.test.tsx"
+		]
 	},
 	"assist": { "actions": { "source": { "organizeImports": "on" } } },
 	"linter": {
