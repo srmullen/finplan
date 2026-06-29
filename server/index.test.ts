@@ -1,18 +1,25 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockRun, mockGet, mockAll } = vi.hoisted(() => ({
+const { mockRun, mockGet, mockAll, mockExistsSync, mockReadFileSync } = vi.hoisted(() => ({
 	mockRun: vi.fn(),
 	mockGet: vi.fn().mockReturnValue(null),
 	mockAll: vi.fn().mockReturnValue([]),
+	mockExistsSync: vi.fn().mockReturnValue(false),
+	mockReadFileSync: vi.fn().mockReturnValue(Buffer.from("")),
 }));
 
-vi.mock("bun:sqlite", () => ({
-	Database: class {
-		run() {}
+vi.mock("better-sqlite3", () => ({
+	default: class {
+		exec() {}
 		prepare() {
 			return { run: mockRun, get: mockGet, all: mockAll };
 		}
 	},
+}));
+
+vi.mock("node:fs", () => ({
+	existsSync: mockExistsSync,
+	readFileSync: mockReadFileSync,
 }));
 
 const mockExit = vi.hoisted(() => {
@@ -467,49 +474,21 @@ describe("GET /api/projection", () => {
 	});
 });
 
-// vi.stubGlobal("Bun") works on macOS where Bun is not in the test globalThis;
-// vi.spyOn(Bun,"file") works on Linux where Bun is a real non-configurable global.
-const bunInGlobal = typeof (globalThis as Record<string, unknown>).Bun !== "undefined";
-
-type BunFileResult = { exists: () => Promise<boolean> };
-
-function stubBunFile(...values: BunFileResult[]): void {
-	if (bunInGlobal) {
-		const spy = vi.spyOn(Bun, "file");
-		for (const v of values) spy.mockReturnValueOnce(v as ReturnType<typeof Bun.file>);
-	} else {
-		const file = vi.fn();
-		for (const v of values) file.mockReturnValueOnce(v);
-		vi.stubGlobal("Bun", { file });
-	}
-}
-
 describe("GET * — static file handler", () => {
-	afterEach(() => {
-		vi.restoreAllMocks();
-		vi.unstubAllGlobals();
-	});
-
 	it("returns 404 when neither the file nor index.html exists", async () => {
-		stubBunFile(
-			{ exists: vi.fn().mockResolvedValue(false) },
-			{ exists: vi.fn().mockResolvedValue(false) },
-		);
+		mockExistsSync.mockReturnValue(false);
 		const res = await server.fetch(new Request("http://localhost/some-route"));
 		expect(res.status).toBe(404);
 	});
 
 	it("returns 200 when the requested file exists", async () => {
-		stubBunFile({ exists: vi.fn().mockResolvedValue(true) });
+		mockExistsSync.mockReturnValueOnce(true);
 		const res = await server.fetch(new Request("http://localhost/app.js"));
 		expect(res.status).toBe(200);
 	});
 
 	it("returns index.html when file does not exist but index.html does", async () => {
-		stubBunFile(
-			{ exists: vi.fn().mockResolvedValue(false) },
-			{ exists: vi.fn().mockResolvedValue(true) },
-		);
+		mockExistsSync.mockReturnValueOnce(false).mockReturnValueOnce(true);
 		const res = await server.fetch(new Request("http://localhost/deep/route"));
 		expect(res.status).toBe(200);
 	});

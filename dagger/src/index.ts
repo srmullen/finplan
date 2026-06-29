@@ -9,7 +9,7 @@ class Finplan {
 	@func()
 	async ci(source: Directory): Promise<string> {
 		// Cache key includes the lock file hash so it invalidates when deps change
-		const lockHash = await source.file("bun.lock").digest();
+		const lockHash = await source.file("package-lock.json").digest();
 		const nodeCache = dag.cacheVolume(`finplan-node-modules-${lockHash}`);
 
 		return dag
