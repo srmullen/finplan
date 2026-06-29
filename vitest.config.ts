@@ -11,6 +11,7 @@ export default defineConfig({
 	},
 	test: {
 		environment: "node",
+		exclude: ["**/node_modules/**", "**/*.bun.test.ts"],
 		coverage: {
 			provider: "istanbul",
 			reporter: ["text", "html"],
@@ -21,6 +22,7 @@ export default defineConfig({
 				"src/api/client.ts",
 				"**/*.test.ts",
 				"**/*.test.tsx",
+				"server/**/*.bun.ts",
 			],
 			thresholds: {
 				lines: 100,
