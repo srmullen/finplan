@@ -2,65 +2,11 @@ import Database from "better-sqlite3";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createSQLiteStores } from "./stores";
 
-function createTestDb(): Database.Database {
-	const db = new Database(":memory:");
-	db.exec(`
-    CREATE TABLE accounts (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      type TEXT NOT NULL,
-      owner TEXT NOT NULL,
-      institution TEXT NOT NULL DEFAULT '',
-      seed_balance REAL NOT NULL DEFAULT 0,
-      seed_date TEXT NOT NULL,
-      rate REAL NOT NULL DEFAULT 0,
-      amortizing INTEGER NOT NULL DEFAULT 0
-    )
-  `);
-	db.exec(`
-    CREATE TABLE external_parties (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL
-    )
-  `);
-	db.exec(`
-    CREATE TABLE schedules (
-      id TEXT PRIMARY KEY,
-      source_id TEXT NOT NULL,
-      destination_id TEXT NOT NULL,
-      amount REAL NOT NULL,
-      estimated INTEGER NOT NULL DEFAULT 0,
-      frequency TEXT NOT NULL,
-      start_date TEXT NOT NULL,
-      end_date TEXT,
-      terminate_at_zero INTEGER NOT NULL DEFAULT 0
-    )
-  `);
-	db.exec(`
-    CREATE TABLE adjustments (
-      id TEXT PRIMARY KEY,
-      account_id TEXT NOT NULL,
-      date TEXT NOT NULL,
-      actual_balance REAL NOT NULL
-    )
-  `);
-	db.exec(`
-    CREATE TABLE scenarios (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      schedule_overrides TEXT,
-      additional_schedules TEXT,
-      additional_accounts TEXT
-    )
-  `);
-	return db;
-}
-
 let db: Database.Database;
 let stores: ReturnType<typeof createSQLiteStores>;
 
 beforeEach(() => {
-	db = createTestDb();
+	db = new Database(":memory:");
 	stores = createSQLiteStores(db);
 });
 
@@ -317,10 +263,18 @@ describe("scenarios store", () => {
 	});
 
 	it("returns [] for null column values in safeParseArray", () => {
-		db.prepare(
-			"INSERT INTO scenarios (id, name, schedule_overrides, additional_schedules, additional_accounts) VALUES (?, ?, ?, ?, ?)",
-		).run("sc2", "Null Test", null, null, null);
-		const s = stores.scenarios.get("sc2");
+		// Use a legacy DB with nullable columns to simulate old-schema rows
+		const legacyDb = new Database(":memory:");
+		legacyDb.exec(
+			"CREATE TABLE scenarios (id TEXT PRIMARY KEY, name TEXT NOT NULL, schedule_overrides TEXT, additional_schedules TEXT, additional_accounts TEXT)",
+		);
+		const legacyStores = createSQLiteStores(legacyDb);
+		legacyDb
+			.prepare(
+				"INSERT INTO scenarios (id, name, schedule_overrides, additional_schedules, additional_accounts) VALUES (?, ?, ?, ?, ?)",
+			)
+			.run("sc2", "Null Test", null, null, null);
+		const s = legacyStores.scenarios.get("sc2");
 		expect(s?.scheduleOverrides).toEqual([]);
 	});
 
@@ -368,5 +322,27 @@ describe("scenarios store", () => {
 		stores.scenarios.create(scenario);
 		stores.scenarios.remove("sc1");
 		expect(stores.scenarios.list()).toHaveLength(0);
+	});
+});
+
+describe("schema migration", () => {
+	it("adds institution column to accounts tables that predate the field", () => {
+		const legacyDb = new Database(":memory:");
+		legacyDb.exec(
+			"CREATE TABLE accounts (id TEXT PRIMARY KEY, name TEXT NOT NULL, type TEXT NOT NULL, owner TEXT NOT NULL, seed_balance REAL NOT NULL DEFAULT 0, seed_date TEXT NOT NULL, rate REAL NOT NULL DEFAULT 0, amortizing INTEGER NOT NULL DEFAULT 0)",
+		);
+		const legacyStores = createSQLiteStores(legacyDb);
+		legacyStores.accounts.create({
+			id: "legacy-1",
+			name: "Checking",
+			type: "checking",
+			owner: "Sean",
+			institution: "Chase",
+			seedBalance: 500,
+			seedDate: "2024-01-01",
+			rate: 0,
+			amortizing: false,
+		});
+		expect(legacyStores.accounts.get("legacy-1")?.institution).toBe("Chase");
 	});
 });
