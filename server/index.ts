@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { project } from "../src/engine/projection";
 import type {
 	Account,
@@ -11,6 +12,9 @@ import db from "./db";
 
 const app = new Hono();
 const API_KEY = process.env.FINPLAN_API_KEY ?? "";
+const CORS_ORIGIN = process.env.CORS_ORIGIN ?? "http://localhost:5173";
+
+app.use("*", cors({ origin: CORS_ORIGIN }));
 
 if (!API_KEY) {
 	console.error("Error: FINPLAN_API_KEY is not set. Refusing to start.");

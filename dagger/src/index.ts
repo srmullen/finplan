@@ -14,15 +14,15 @@ class Finplan {
 
 		return dag
 			.container()
-			.from("oven/bun:latest")
+			.from("node:22-alpine")
 			.withDirectory("/app", source, { exclude: ["node_modules", ".git"] })
 			.withWorkdir("/app")
 			.withMountedCache("/app/node_modules", nodeCache)
-			.withExec(["bun", "install", "--frozen-lockfile"])
-			.withExec(["bun", "run", "typecheck"])
-			.withExec(["bun", "run", "typecheck:server"])
-			.withExec(["bun", "run", "test:coverage"])
-			.withExec(["bun", "run", "build"])
+			.withExec(["npm", "install"])
+			.withExec(["npm", "run", "typecheck"])
+			.withExec(["npm", "run", "typecheck:server"])
+			.withExec(["npm", "run", "test:coverage"])
+			.withExec(["npm", "run", "build"])
 			.stdout();
 	}
 }
