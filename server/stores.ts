@@ -138,9 +138,10 @@ export function createSQLiteStores(db: Database.Database): Stores {
 	const parties: ExternalPartyStore = {
 		list: () =>
 			(
-				db
-					.prepare("SELECT * FROM external_parties")
-					.all() as Record<string, unknown>[]
+				db.prepare("SELECT * FROM external_parties").all() as Record<
+					string,
+					unknown
+				>[]
 			).map(rowToParty),
 		get: (id) => {
 			const row = db
@@ -149,14 +150,16 @@ export function createSQLiteStores(db: Database.Database): Stores {
 			return row ? rowToParty(row) : null;
 		},
 		create: (party) => {
-			db.prepare(
-				"INSERT INTO external_parties (id, name) VALUES (?, ?)",
-			).run(party.id, party.name);
+			db.prepare("INSERT INTO external_parties (id, name) VALUES (?, ?)").run(
+				party.id,
+				party.name,
+			);
 		},
 		update: (party) => {
-			db.prepare(
-				"UPDATE external_parties SET name = ? WHERE id = ?",
-			).run(party.name, party.id);
+			db.prepare("UPDATE external_parties SET name = ? WHERE id = ?").run(
+				party.name,
+				party.id,
+			);
 		},
 		remove: (id) => {
 			db.prepare("DELETE FROM external_parties WHERE id = ?").run(id);
@@ -212,9 +215,10 @@ export function createSQLiteStores(db: Database.Database): Stores {
 	const adjustments: AdjustmentStore = {
 		list: () =>
 			(
-				db
-					.prepare("SELECT * FROM adjustments")
-					.all() as Record<string, unknown>[]
+				db.prepare("SELECT * FROM adjustments").all() as Record<
+					string,
+					unknown
+				>[]
 			).map(rowToAdjustment),
 		create: (adjustment) => {
 			db.prepare(
