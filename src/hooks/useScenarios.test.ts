@@ -18,8 +18,8 @@ vi.mock("@src/api/client", () => ({
 
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 
-import { useScenarios } from "./useScenarios";
 import type { Scenario } from "../engine/types";
+import { useScenarios } from "./useScenarios";
 
 const scenario: Scenario = {
 	id: "sc-1",
@@ -108,7 +108,10 @@ describe("useScenarios — updateScenario", () => {
 		await act(async () => {
 			await result.current.updateScenario(scenario);
 		});
-		expect(mockPut).toHaveBeenCalledWith(`/api/scenarios/${scenario.id}`, scenario);
+		expect(mockPut).toHaveBeenCalledWith(
+			`/api/scenarios/${scenario.id}`,
+			scenario,
+		);
 	});
 
 	it("sets error and does not refresh when put fails with an Error", async () => {

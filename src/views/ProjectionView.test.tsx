@@ -1,14 +1,26 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+	act,
+	cleanup,
+	fireEvent,
+	render,
+	screen,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Account, ProjectionResult } from "../engine/types";
 
 vi.mock("@src/hooks/useAccounts");
 vi.mock("@src/api/client");
-vi.mock("@src/components/AdjustmentPanel", () => ({ default: () => <div data-testid="adjustment-panel" /> }));
-let capturedToggleScenario: ((id: string) => void) = () => {};
+vi.mock("@src/components/AdjustmentPanel", () => ({
+	default: () => <div data-testid="adjustment-panel" />,
+}));
+let capturedToggleScenario: (id: string) => void = () => {};
 vi.mock("@src/components/ScenarioManager", () => ({
-	default: ({ onToggleScenario }: { onToggleScenario: (id: string) => void }) => {
+	default: ({
+		onToggleScenario,
+	}: {
+		onToggleScenario: (id: string) => void;
+	}) => {
 		capturedToggleScenario = onToggleScenario;
 		return <div data-testid="scenario-manager" />;
 	},
@@ -17,8 +29,12 @@ let capturedTickFormatter: ((v: unknown) => string) | undefined;
 let capturedTooltipFormatter: ((v: number) => string) | undefined;
 
 vi.mock("recharts", () => ({
-	ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-	LineChart: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+	ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
+		<div>{children}</div>
+	),
+	LineChart: ({ children }: { children: React.ReactNode }) => (
+		<div>{children}</div>
+	),
 	Line: () => null,
 	XAxis: () => null,
 	YAxis: ({ tickFormatter }: { tickFormatter?: (v: unknown) => string }) => {
@@ -34,8 +50,8 @@ vi.mock("recharts", () => ({
 	ReferenceLine: () => null,
 }));
 
-import { useAccounts } from "@src/hooks/useAccounts";
 import { get } from "@src/api/client";
+import { useAccounts } from "@src/hooks/useAccounts";
 import ProjectionView from "./ProjectionView";
 
 const account: Account = {
@@ -63,7 +79,7 @@ const amortizingAccount: Account = {
 const projectionResult: ProjectionResult = {
 	"acc-1": [
 		{ date: "2024-01-01", balance: 1000 },
-		{ date: "2024-01-15", balance: 1050 },  // same month — filtered by sampleMonthly
+		{ date: "2024-01-15", balance: 1050 }, // same month — filtered by sampleMonthly
 		{ date: "2024-02-01", balance: 1100 },
 	],
 };
@@ -114,7 +130,9 @@ describe("ProjectionView — with accounts", () => {
 	it("fetches baseline projection on mount", async () => {
 		render(<ProjectionView />);
 		await act(async () => {});
-		expect(vi.mocked(get)).toHaveBeenCalledWith(expect.stringContaining("/api/projection"));
+		expect(vi.mocked(get)).toHaveBeenCalledWith(
+			expect.stringContaining("/api/projection"),
+		);
 	});
 
 	it("fetches both with-adj and no-adj baselines", async () => {
@@ -211,19 +229,33 @@ describe("ProjectionView — stale fetch guard", () => {
 		let resolveFirst!: (v: ProjectionResult) => void;
 		let resolveSecond!: (v: ProjectionResult) => void;
 
-		const staleResult: ProjectionResult = { "acc-1": [{ date: "2100-01-01", balance: 99999 }] };
-		const freshResult: ProjectionResult = { "acc-1": [{ date: "2024-01-01", balance: 1000 }] };
+		const staleResult: ProjectionResult = {
+			"acc-1": [{ date: "2100-01-01", balance: 99999 }],
+		};
+		const freshResult: ProjectionResult = {
+			"acc-1": [{ date: "2024-01-01", balance: 1000 }],
+		};
 
 		vi.mocked(get)
-			.mockReturnValueOnce(new Promise((r) => { resolveFirst = r; }) as Promise<ProjectionResult>)
-			.mockReturnValueOnce(new Promise((r) => { resolveSecond = r; }) as Promise<ProjectionResult>)
+			.mockReturnValueOnce(
+				new Promise((r) => {
+					resolveFirst = r;
+				}) as Promise<ProjectionResult>,
+			)
+			.mockReturnValueOnce(
+				new Promise((r) => {
+					resolveSecond = r;
+				}) as Promise<ProjectionResult>,
+			)
 			.mockResolvedValue(freshResult);
 
 		render(<ProjectionView />);
 
 		// Change horizon to trigger a second effect run before the first fetch resolves
 		await act(async () => {
-			fireEvent.change(screen.getByRole("combobox"), { target: { value: "24" } });
+			fireEvent.change(screen.getByRole("combobox"), {
+				target: { value: "24" },
+			});
 		});
 
 		// Resolve the stale first fetch
@@ -241,29 +273,35 @@ describe("ProjectionView — stale scenario fetch guard", () => {
 		setupMocks([account]);
 
 		let resolveStaleScenario!: (v: ProjectionResult) => void;
-		const staleScenarioFetch = new Promise<ProjectionResult>((res) => { resolveStaleScenario = res; });
+		const staleScenarioFetch = new Promise<ProjectionResult>((res) => {
+			resolveStaleScenario = res;
+		});
 
 		vi.mocked(get)
-			.mockResolvedValueOnce(projectionResult)  // initial baseline main
-			.mockResolvedValueOnce(projectionResult)  // initial baseline noAdj
-			.mockReturnValueOnce(staleScenarioFetch)   // first (stale) scenario fetch — deferred
-			.mockResolvedValue(projectionResult);      // all subsequent fetches
+			.mockResolvedValueOnce(projectionResult) // initial baseline main
+			.mockResolvedValueOnce(projectionResult) // initial baseline noAdj
+			.mockReturnValueOnce(staleScenarioFetch) // first (stale) scenario fetch — deferred
+			.mockResolvedValue(projectionResult); // all subsequent fetches
 
 		render(<ProjectionView />);
-		await act(async () => {});  // initial baseline resolves
+		await act(async () => {}); // initial baseline resolves
 
 		fireEvent.click(screen.getByRole("button", { name: "Scenarios" }));
 		await act(async () => {});
 
 		// Toggle sc-1 → first scenario fetch starts (id=1, deferred)
-		await act(async () => { capturedToggleScenario("sc-1"); });
+		await act(async () => {
+			capturedToggleScenario("sc-1");
+		});
 
 		// Change horizon → endDate changes → new scenario effect fires (id=2)
 		fireEvent.change(screen.getByRole("combobox"), { target: { value: "24" } });
-		await act(async () => {});  // new baseline + new scenario fetch resolve (id=2)
+		await act(async () => {}); // new baseline + new scenario fetch resolve (id=2)
 
 		// Resolve the stale first fetch → guard at line 142 fires (ref=2, id=1 → mismatch)
-		await act(async () => { resolveStaleScenario(projectionResult); });
+		await act(async () => {
+			resolveStaleScenario(projectionResult);
+		});
 		await act(async () => {});
 	});
 });
@@ -275,15 +313,15 @@ describe("ProjectionView — chart formatters", () => {
 		render(<ProjectionView />);
 		await act(async () => {});
 		expect(capturedTickFormatter).toBeDefined();
-		expect(capturedTickFormatter!(1234)).toBe("$1,234");
-		expect(capturedTickFormatter!(-500)).toBe("-$500");
+		expect(capturedTickFormatter?.(1234)).toBe("$1,234");
+		expect(capturedTickFormatter?.(-500)).toBe("-$500");
 	});
 
 	it("tooltip formatter formats values as USD currency", async () => {
 		render(<ProjectionView />);
 		await act(async () => {});
 		expect(capturedTooltipFormatter).toBeDefined();
-		expect(capturedTooltipFormatter!(9876)).toBe("$9,876");
+		expect(capturedTooltipFormatter?.(9876)).toBe("$9,876");
 	});
 });
 
@@ -295,9 +333,9 @@ describe("ProjectionView — scenario fetching", () => {
 
 		// Verify baseline URL
 		const [firstCall] = vi.mocked(get).mock.calls;
-		expect(firstCall![0]).toContain("startDate=");
-		expect(firstCall![0]).toContain("endDate=");
-		expect(firstCall![0]).not.toContain("scenarioId=");
+		expect(firstCall?.[0]).toContain("startDate=");
+		expect(firstCall?.[0]).toContain("endDate=");
+		expect(firstCall?.[0]).not.toContain("scenarioId=");
 	});
 
 	it("fetches scenario projection when a scenario is toggled on via ScenarioManager", async () => {
@@ -314,7 +352,7 @@ describe("ProjectionView — scenario fetching", () => {
 			capturedToggleScenario("sc-1");
 		});
 		await act(async () => {});
-		await act(async () => {});  // extra flush: ensures setScenarioResults re-render completes
+		await act(async () => {}); // extra flush: ensures setScenarioResults re-render completes
 
 		// The scenario effect should fetch with scenarioId
 		const calls = vi.mocked(get).mock.calls.map(([url]) => url as string);
@@ -331,10 +369,14 @@ describe("ProjectionView — scenario fetching", () => {
 		await act(async () => {});
 
 		// Toggle on, then off
-		await act(async () => { capturedToggleScenario("sc-1"); });
+		await act(async () => {
+			capturedToggleScenario("sc-1");
+		});
 		await act(async () => {});
 		await act(async () => {});
-		await act(async () => { capturedToggleScenario("sc-1"); });
+		await act(async () => {
+			capturedToggleScenario("sc-1");
+		});
 		await act(async () => {});
 
 		// After toggling off, the scenario effect should not have fetched for sc-1 recently
@@ -362,9 +404,9 @@ describe("ProjectionView — scenario fetching", () => {
 		};
 
 		vi.mocked(get)
-			.mockResolvedValueOnce(partialBaseline)   // baseline main
-			.mockResolvedValueOnce(partialBaseline)   // baseline noAdj
-			.mockResolvedValue(partialScenario);       // scenario fetch
+			.mockResolvedValueOnce(partialBaseline) // baseline main
+			.mockResolvedValueOnce(partialBaseline) // baseline noAdj
+			.mockResolvedValue(partialScenario); // scenario fetch
 
 		render(<ProjectionView />);
 		await act(async () => {});
@@ -372,7 +414,9 @@ describe("ProjectionView — scenario fetching", () => {
 		fireEvent.click(screen.getByRole("button", { name: "Scenarios" }));
 		await act(async () => {});
 
-		await act(async () => { capturedToggleScenario("sc-1"); });
+		await act(async () => {
+			capturedToggleScenario("sc-1");
+		});
 		await act(async () => {});
 		await act(async () => {});
 		await act(async () => {});

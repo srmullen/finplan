@@ -15,7 +15,13 @@ export default defineConfig({
 			provider: "istanbul",
 			reporter: ["text", "html"],
 			include: ["src/**", "server/**"],
-			exclude: ["**/*.d.ts", "**/*.css", "src/api/client.ts", "**/*.test.ts", "**/*.test.tsx"],
+			exclude: [
+				"**/*.d.ts",
+				"**/*.css",
+				"src/api/client.ts",
+				"**/*.test.ts",
+				"**/*.test.tsx",
+			],
 			thresholds: {
 				lines: 100,
 				functions: 100,

@@ -447,8 +447,18 @@ describe("project — Adjustments (sort comparator)", () => {
 			externalParties: [],
 			schedules: [],
 			adjustments: [
-				{ id: "a1", accountId: "checking", date: "2024-01-05", actualBalance: 1500 },
-				{ id: "a2", accountId: "checking", date: "2024-01-10", actualBalance: 2000 },
+				{
+					id: "a1",
+					accountId: "checking",
+					date: "2024-01-05",
+					actualBalance: 1500,
+				},
+				{
+					id: "a2",
+					accountId: "checking",
+					date: "2024-01-10",
+					actualBalance: 2000,
+				},
 			],
 			startDate: "2024-01-15",
 			endDate: "2024-01-15",

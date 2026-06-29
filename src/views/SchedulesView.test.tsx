@@ -1,5 +1,11 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+	act,
+	cleanup,
+	fireEvent,
+	render,
+	screen,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Account, ExternalParty, Schedule } from "../engine/types";
 
@@ -93,7 +99,9 @@ describe("SchedulesView — empty state (no nodes)", () => {
 
 	it("disables Add schedule button when fewer than 2 nodes", () => {
 		render(<SchedulesView />);
-		const btn = screen.getByRole("button", { name: "+ Add schedule" }) as HTMLButtonElement;
+		const btn = screen.getByRole("button", {
+			name: "+ Add schedule",
+		}) as HTMLButtonElement;
 		expect(btn.disabled).toBe(true);
 	});
 });
@@ -103,7 +111,9 @@ describe("SchedulesView — with nodes (2+ nodes)", () => {
 
 	it("enables Add schedule button when 2+ nodes exist", () => {
 		render(<SchedulesView />);
-		const btn = screen.getByRole("button", { name: "+ Add schedule" }) as HTMLButtonElement;
+		const btn = screen.getByRole("button", {
+			name: "+ Add schedule",
+		}) as HTMLButtonElement;
 		expect(btn.disabled).toBe(false);
 	});
 
@@ -118,7 +128,9 @@ describe("SchedulesView — with nodes (2+ nodes)", () => {
 	it("calls addSchedule and hides form on save (add mode)", async () => {
 		render(<SchedulesView />);
 		fireEvent.click(screen.getByRole("button", { name: "+ Add schedule" }));
-		fireEvent.change(screen.getByLabelText("Amount ($)"), { target: { value: "500" } });
+		fireEvent.change(screen.getByLabelText("Amount ($)"), {
+			target: { value: "500" },
+		});
 		await act(async () => {
 			fireEvent.submit(screen.getByLabelText("Amount ($)").closest("form")!);
 		});
@@ -158,7 +170,9 @@ describe("SchedulesView — with schedules", () => {
 		fireEvent.click(screen.getByRole("button", { name: "Edit" }));
 		expect(screen.getByRole("button", { name: "Save changes" })).toBeTruthy();
 		await act(async () => {
-			fireEvent.submit(screen.getByRole("button", { name: "Save changes" }).closest("form")!);
+			fireEvent.submit(
+				screen.getByRole("button", { name: "Save changes" }).closest("form")!,
+			);
 		});
 		expect(mockUpdateSchedule).toHaveBeenCalled();
 	});
@@ -171,7 +185,11 @@ describe("SchedulesView — with schedules", () => {
 	});
 
 	it("resolves source/destination node labels for accounts", () => {
-		const scheduleWithAccount: Schedule = { ...schedule, sourceId: "acc-1", destinationId: "party-1" };
+		const scheduleWithAccount: Schedule = {
+			...schedule,
+			sourceId: "acc-1",
+			destinationId: "party-1",
+		};
 		setupMocks([scheduleWithAccount], [account], [party]);
 		render(<SchedulesView />);
 		expect(screen.getByText("Checking (Sean)")).toBeTruthy();

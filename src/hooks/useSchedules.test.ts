@@ -18,8 +18,8 @@ vi.mock("@src/api/client", () => ({
 
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 
-import { useSchedules } from "./useSchedules";
 import type { Schedule } from "../engine/types";
+import { useSchedules } from "./useSchedules";
 
 const schedule: Schedule = {
 	id: "s1",
@@ -111,7 +111,10 @@ describe("useSchedules — updateSchedule", () => {
 		await act(async () => {
 			await result.current.updateSchedule(schedule);
 		});
-		expect(mockPut).toHaveBeenCalledWith(`/api/schedules/${schedule.id}`, schedule);
+		expect(mockPut).toHaveBeenCalledWith(
+			`/api/schedules/${schedule.id}`,
+			schedule,
+		);
 	});
 
 	it("sets error and does not refresh when put fails with an Error", async () => {

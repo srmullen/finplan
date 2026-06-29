@@ -18,8 +18,8 @@ vi.mock("@src/api/client", () => ({
 
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 
-import { useExternalParties } from "./useExternalParties";
 import type { ExternalParty } from "../engine/types";
+import { useExternalParties } from "./useExternalParties";
 
 const party: ExternalParty = { id: "party-1", name: "Employer" };
 
@@ -102,7 +102,10 @@ describe("useExternalParties — updateParty", () => {
 		await act(async () => {
 			await result.current.updateParty(party);
 		});
-		expect(mockPut).toHaveBeenCalledWith(`/api/external-parties/${party.id}`, party);
+		expect(mockPut).toHaveBeenCalledWith(
+			`/api/external-parties/${party.id}`,
+			party,
+		);
 	});
 
 	it("sets error and does not refresh when put fails with an Error", async () => {

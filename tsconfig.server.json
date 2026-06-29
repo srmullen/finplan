@@ -10,7 +10,7 @@
 		"skipLibCheck": true,
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
-		"noFallthroughCasesInSwitch": true,
+		"noFallthroughCasesInSwitch": true
 	},
 	"include": ["server", "src/engine"],
 	"exclude": ["server/**/*.test.ts"]

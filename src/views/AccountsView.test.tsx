@@ -1,5 +1,11 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+	act,
+	cleanup,
+	fireEvent,
+	render,
+	screen,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Account, ExternalParty } from "../engine/types";
 
@@ -86,7 +92,9 @@ describe("AccountsView — empty state", () => {
 	it("calls addAccount and hides form on save (add mode)", async () => {
 		render(<AccountsView />);
 		fireEvent.click(screen.getByRole("button", { name: "+ Add account" }));
-		fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Savings" } });
+		fireEvent.change(screen.getByLabelText("Name"), {
+			target: { value: "Savings" },
+		});
 		await act(async () => {
 			fireEvent.submit(screen.getByLabelText("Name").closest("form")!);
 		});
@@ -95,7 +103,9 @@ describe("AccountsView — empty state", () => {
 
 	it("shows ExternalPartyForm when '+ Add external party' is clicked, hides on Cancel", () => {
 		render(<AccountsView />);
-		fireEvent.click(screen.getByRole("button", { name: "+ Add external party" }));
+		fireEvent.click(
+			screen.getByRole("button", { name: "+ Add external party" }),
+		);
 		expect(screen.getByLabelText("Name")).toBeTruthy();
 		fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 		expect(screen.queryByLabelText("Name")).toBeNull();
@@ -103,8 +113,12 @@ describe("AccountsView — empty state", () => {
 
 	it("calls addParty and hides form on save (add mode)", async () => {
 		render(<AccountsView />);
-		fireEvent.click(screen.getByRole("button", { name: "+ Add external party" }));
-		fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Utility" } });
+		fireEvent.click(
+			screen.getByRole("button", { name: "+ Add external party" }),
+		);
+		fireEvent.change(screen.getByLabelText("Name"), {
+			target: { value: "Utility" },
+		});
 		await act(async () => {
 			fireEvent.submit(screen.getByLabelText("Name").closest("form")!);
 		});
@@ -163,7 +177,9 @@ describe("AccountsView — with data", () => {
 		fireEvent.click(screen.getAllByRole("button", { name: "Edit" })[0]!);
 		expect(screen.getByRole("button", { name: "Save changes" })).toBeTruthy();
 		await act(async () => {
-			fireEvent.submit(screen.getByRole("button", { name: "Save changes" }).closest("form")!);
+			fireEvent.submit(
+				screen.getByRole("button", { name: "Save changes" }).closest("form")!,
+			);
 		});
 		expect(mockUpdateAccount).toHaveBeenCalled();
 	});
@@ -192,7 +208,9 @@ describe("AccountsView — with data", () => {
 		fireEvent.click(editBtns.at(-1)!);
 		expect(screen.getByRole("button", { name: "Save changes" })).toBeTruthy();
 		await act(async () => {
-			fireEvent.submit(screen.getByRole("button", { name: "Save changes" }).closest("form")!);
+			fireEvent.submit(
+				screen.getByRole("button", { name: "Save changes" }).closest("form")!,
+			);
 		});
 		expect(mockUpdateParty).toHaveBeenCalled();
 	});

@@ -16,8 +16,8 @@ vi.mock("@src/api/client", () => ({
 
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 
-import { useAdjustments } from "./useAdjustments";
 import type { Adjustment } from "../engine/types";
+import { useAdjustments } from "./useAdjustments";
 
 const adjustment: Adjustment = {
 	id: "adj-1",

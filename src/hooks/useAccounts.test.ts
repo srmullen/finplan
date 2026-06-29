@@ -18,8 +18,8 @@ vi.mock("@src/api/client", () => ({
 
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 
-import { useAccounts } from "./useAccounts";
 import type { Account } from "../engine/types";
+import { useAccounts } from "./useAccounts";
 
 const account: Account = {
 	id: "acc-1",
@@ -114,7 +114,10 @@ describe("useAccounts — updateAccount", () => {
 		await act(async () => {
 			await result.current.updateAccount(account);
 		});
-		expect(mockPut).toHaveBeenCalledWith(`/api/accounts/${account.id}`, account);
+		expect(mockPut).toHaveBeenCalledWith(
+			`/api/accounts/${account.id}`,
+			account,
+		);
 	});
 
 	it("sets error and does not refresh when put fails with an Error", async () => {
