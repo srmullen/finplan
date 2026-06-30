@@ -17,6 +17,7 @@ import type { ProjectionResult, Schedule } from "../engine/types";
 import { useAccounts } from "../hooks/useAccounts";
 import { useExternalParties } from "../hooks/useExternalParties";
 import { useSchedules } from "../hooks/useSchedules";
+import { displayBalance } from "../utils/displayBalance";
 
 function formatCurrency(n: number) {
 	return new Intl.NumberFormat("en-US", {
@@ -80,11 +81,6 @@ export default function AccountDetailView() {
 		});
 	}, [id, accounts, startDate, endDate]);
 
-	const chartData = sampleMonthly(projection).map((p) => ({
-		date: p.date.slice(0, 7),
-		balance: Math.round(p.balance),
-	}));
-
 	function nodeLabel(nodeId: string) {
 		const acc = accounts.find((a) => a.id === nodeId);
 		if (acc) return `${acc.name} (${acc.owner})`;
@@ -121,6 +117,11 @@ export default function AccountDetailView() {
 		);
 	}
 
+	const chartData = sampleMonthly(projection).map((p) => ({
+		date: p.date.slice(0, 7),
+		balance: Math.round(displayBalance(account, p.balance)),
+	}));
+
 	const noNodes = accounts.length + externalParties.length < 2;
 
 	return (
@@ -143,10 +144,13 @@ export default function AccountDetailView() {
 					<div
 						style={{
 							...styles.seedBalance,
-							color: account.seedBalance < 0 ? "#dc2626" : "#111827",
+							color:
+								!account.amortizing && account.seedBalance < 0
+									? "#dc2626"
+									: "#111827",
 						}}
 					>
-						{formatCurrency(account.seedBalance)}
+						{formatCurrency(displayBalance(account, account.seedBalance))}
 					</div>
 					<div style={styles.seedMeta}>
 						seed balance as of {account.seedDate}

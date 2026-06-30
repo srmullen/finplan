@@ -24,14 +24,22 @@ vi.mock("@src/components/ScenarioManager", () => ({
 }));
 let capturedTickFormatter: ((v: unknown) => string) | undefined;
 let capturedTooltipFormatter: ((v: number) => string) | undefined;
+let capturedChartData: Record<string, string | number>[] = [];
 
 vi.mock("recharts", () => ({
 	ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
 		<div>{children}</div>
 	),
-	LineChart: ({ children }: { children: React.ReactNode }) => (
-		<div>{children}</div>
-	),
+	LineChart: ({
+		children,
+		data,
+	}: {
+		children: React.ReactNode;
+		data?: Record<string, string | number>[];
+	}) => {
+		if (data) capturedChartData = data;
+		return <div>{children}</div>;
+	},
 	Line: () => null,
 	XAxis: () => null,
 	YAxis: ({ tickFormatter }: { tickFormatter?: (v: unknown) => string }) => {
@@ -163,6 +171,19 @@ describe("ProjectionView — with accounts", () => {
 		fireEvent.change(select, { target: { value: "24" } });
 		await act(async () => {});
 		expect(vi.mocked(get).mock.calls.length).toBeGreaterThan(callsBefore);
+	});
+});
+
+describe("ProjectionView — amortizing balance display", () => {
+	it("negates chart balance for amortizing accounts", async () => {
+		setupMocks([amortizingAccount]);
+		const loanResult: ProjectionResult = {
+			"loan-1": [{ date: "2024-01-01", balance: -10000 }],
+		};
+		vi.mocked(get).mockResolvedValue(loanResult);
+		render(<ProjectionView />);
+		await act(async () => {});
+		expect(capturedChartData[0]?.["loan-1"]).toBe(10000);
 	});
 });
 

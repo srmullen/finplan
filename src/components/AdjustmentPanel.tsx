@@ -1,6 +1,7 @@
 import { type FormEvent, useState } from "react";
 import type { Account, ProjectionResult } from "../engine/types";
 import { useAdjustments } from "../hooks/useAdjustments";
+import { displayBalance } from "../utils/displayBalance";
 import { generateId } from "../utils/id";
 
 interface Props {
@@ -43,13 +44,16 @@ export default function AdjustmentPanel({
 	const [balance, setBalance] = useState("");
 	const [filterAccountId, setFilterAccountId] = useState<string>("");
 
+	const selectedAccount = accounts.find((a) => a.id === accountId);
+
 	function handleAdd(e: FormEvent) {
 		e.preventDefault();
+		const raw = parseFloat(balance);
 		void addAdjustment({
 			id: generateId(),
 			accountId,
 			date,
-			actualBalance: parseFloat(balance),
+			actualBalance: selectedAccount?.amortizing ? -raw : raw,
 		});
 		setBalance("");
 	}
@@ -150,6 +154,9 @@ export default function AdjustmentPanel({
 								)
 								.sort((a, b) => b.date.localeCompare(a.date))
 								.map((adj) => {
+									const adjAccount = accounts.find(
+										(a) => a.id === adj.accountId,
+									);
 									const projected = variance(
 										baselineResult,
 										adj.accountId,
@@ -167,7 +174,11 @@ export default function AdjustmentPanel({
 													fontVariantNumeric: "tabular-nums",
 												}}
 											>
-												{formatCurrency(adj.actualBalance)}
+												{formatCurrency(
+													adjAccount
+														? displayBalance(adjAccount, adj.actualBalance)
+														: adj.actualBalance,
+												)}
 											</td>
 											<td
 												style={{
@@ -176,7 +187,13 @@ export default function AdjustmentPanel({
 													color: "#6b7280",
 												}}
 											>
-												{projected !== null ? formatCurrency(projected) : "—"}
+												{projected !== null
+													? formatCurrency(
+															adjAccount
+																? displayBalance(adjAccount, projected)
+																: projected,
+														)
+													: "—"}
 											</td>
 											<td
 												style={{

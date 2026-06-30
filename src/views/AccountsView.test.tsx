@@ -176,6 +176,22 @@ describe("AccountsView — with data", () => {
 		expect(screen.getByText("amortizing")).toBeTruthy();
 	});
 
+	it("displays amortizing loan balance as positive (no red)", () => {
+		const loanAccount: Account = {
+			id: "acc-3",
+			name: "Car Loan",
+			type: "loan",
+			owner: "Sean",
+			seedBalance: -20000,
+			seedDate: "2024-01-01",
+			rate: 0,
+			amortizing: true,
+		};
+		setupMocks([loanAccount]);
+		renderView();
+		expect(screen.getByText("$20,000")).toBeTruthy();
+	});
+
 	it("renders parties table", () => {
 		renderView();
 		expect(screen.getByText("Employer")).toBeTruthy();
