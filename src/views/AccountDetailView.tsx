@@ -18,6 +18,7 @@ import { useAccounts } from "../hooks/useAccounts";
 import { useExternalParties } from "../hooks/useExternalParties";
 import { useSchedules } from "../hooks/useSchedules";
 import { displayBalance } from "../utils/displayBalance";
+import { formatDate } from "../utils/formatDate";
 
 function formatCurrency(n: number) {
 	return new Intl.NumberFormat("en-US", {
@@ -227,7 +228,7 @@ export default function AccountDetailView() {
 				{accountSchedules.length === 0 ? (
 					<p style={styles.empty}>No schedules involve this account.</p>
 				) : (
-					<table style={styles.table}>
+					<table className="data-table">
 						<thead>
 							<tr>
 								<th>From</th>
@@ -248,7 +249,7 @@ export default function AccountDetailView() {
 									</td>
 									<td>{s.frequency}</td>
 									<td>{nodeLabel(s.destinationId)}</td>
-									<td>{s.startDate}</td>
+									<td>{formatDate(s.startDate)}</td>
 									<td style={styles.actions}>
 										<button
 											type="button"
@@ -329,11 +330,6 @@ const styles = {
 		cursor: "pointer",
 		color: "#374151",
 		fontSize: "0.85rem",
-	},
-	table: {
-		width: "100%",
-		borderCollapse: "collapse" as const,
-		fontSize: "0.875rem",
 	},
 	actions: {
 		textAlign: "right" as const,

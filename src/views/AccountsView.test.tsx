@@ -138,7 +138,7 @@ describe("AccountsView — empty state", () => {
 describe("AccountsView — with data", () => {
 	beforeEach(() => setupMocks([account, negativeAccount], [party]));
 
-	it("groups accounts by owner", () => {
+	it("shows owner column for each account", () => {
 		renderView();
 		expect(screen.getByText("Sean")).toBeTruthy();
 		expect(screen.getByText("Wife")).toBeTruthy();
