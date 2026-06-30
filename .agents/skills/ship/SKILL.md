@@ -8,15 +8,48 @@ Implement the work, commit it, and open a pull request.
 
 ## Steps
 
-1. Fetch the latest changes for the target branch (default: `main`) and rebase if the current branch is behind:
-   ```
-   git fetch origin <target-branch>
-   git log --oneline HEAD..origin/<target-branch>
-   ```
-   If the current branch is behind, rebase before implementing:
-   ```
-   git rebase origin/<target-branch>
-   ```
+1. Sync with the stack and find the correct base branch (default target: `dev`):
+
+   **If continuing work on an existing branch:**
+   - Identify the base branch (the branch this one was created from).
+   - Check whether the base branch still exists on origin:
+     ```
+     git ls-remote --heads origin <base-branch>
+     ```
+   - If the output is **empty** (base was merged and deleted):
+     - Rebase the current branch onto `origin/dev`:
+       ```
+       git fetch origin dev
+       git rebase origin/dev
+       ```
+     - Delete the old base branch locally and remotely:
+       ```
+       git branch -d <base-branch>
+       git push origin --delete <base-branch>
+       ```
+   - If the base branch **still exists**, rebase onto its tip:
+     ```
+     git fetch origin <base-branch>
+     git rebase origin/<base-branch>
+     ```
+
+   **If starting a new branch for a new issue:**
+   - Find the most recently opened PR targeting `dev`:
+     ```
+     gh pr list --base dev --state open --json headRefName,createdAt \
+       --jq 'sort_by(.createdAt) | reverse | .[0].headRefName'
+     ```
+   - If a PR is returned, create the new branch from its HEAD:
+     ```
+     git fetch origin <headRefName>
+     git checkout -b <new-branch> origin/<headRefName>
+     ```
+   - If no open PRs exist, branch from `origin/dev`:
+     ```
+     git fetch origin dev
+     git checkout -b <new-branch> origin/dev
+     ```
+   - Record the upstream PR number (if any) to include in the new PR body.
 
 2. Run `/implement` to build, test, and commit the work to the current branch.
 
@@ -38,12 +71,14 @@ Implement the work, commit it, and open a pull request.
    git push -u origin <branch>
    ```
 
-6. Open a pull request with `gh pr create`. Use `Closes #N` in the body to link and auto-close the source issue. Follow the PR body format below.
+6. Open a pull request with `gh pr create`, targeting `dev`. Use `Closes #N` in the body to link and auto-close the source issue. If this branch was stacked on another PR's branch, include a stacking note. Follow the PR body format below.
 
 ## PR body format
 
 ```
 Closes #N
+
+Stacked on #N — merge after that PR.   ← include only when stacked on another open PR
 
 ## Summary
 - <bullet summarising what changed and why>
@@ -56,7 +91,9 @@ Closes #N
 
 ## Notes
 
+- The default target branch is `dev`, not `main`. Always PR into `dev`.
 - Infer the issue number from the conversation, the branch name, or recent commits (`git log --oneline -10`).
 - Keep the PR title under 70 characters and match the issue title where possible.
 - If no issue exists, omit the `Closes` line.
-- Infer the target branch from `gh pr view --json baseRefName` if a draft PR exists, or default to `main`. Never assume the target without checking.
+- Omit the "Stacked on" line if this PR is not stacked on another open PR.
+- Merge order matters: stacked PRs must be merged into `dev` in order (oldest first).

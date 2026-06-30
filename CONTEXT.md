@@ -29,7 +29,7 @@ An annual percentage applied to an Account's balance each period by the Projecti
 _Avoid_: Interest rate, APY, return, yield
 
 **Amortizing Account**:
-A liability Account stored with a negative seed balance that approaches zero as payments are applied, closing when it reaches zero (e.g., car loan, mortgage). Payments to it automatically terminate at payoff. The user enters the amount owed as a positive number; the system stores it as negative.
+A liability Account stored with a negative seed balance that approaches zero as payments are applied, closing when it reaches zero (e.g., car loan, mortgage). Payments to it automatically terminate at payoff. The user enters the amount owed as a positive number; the system stores it as negative. Balances are displayed to the user as positive and declining (the UI negates the stored value at render time); the engine and API always return the raw negative value.
 _Avoid_: Term loan, closed-end account
 
 **Revolving Account**:
