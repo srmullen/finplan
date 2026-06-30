@@ -394,6 +394,13 @@ describe("AccountDetailView — header balance", () => {
 		await act(async () => {});
 		expect(screen.getByText("-$5,000")).toBeTruthy();
 	});
+
+	it("displays amortizing seed balance as positive", async () => {
+		setupMocks([{ ...account, seedBalance: -20000, amortizing: true, rate: 0 }]);
+		renderAt("acc-1");
+		await act(async () => {});
+		expect(screen.getByText("$20,000")).toBeTruthy();
+	});
 });
 
 describe("AccountDetailView — stale fetch guard", () => {

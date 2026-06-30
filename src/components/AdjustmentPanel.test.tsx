@@ -42,6 +42,17 @@ const accounts: Account[] = [
 	},
 ];
 
+const loanAccount: Account = {
+	id: "loan-1",
+	name: "Car Loan",
+	type: "loan",
+	owner: "Sean",
+	seedBalance: -20000,
+	seedDate: "2024-01-01",
+	rate: 0.05,
+	amortizing: true,
+};
+
 const adjustment: Adjustment = {
 	id: "adj-1",
 	accountId: "acc-1",
@@ -95,6 +106,27 @@ describe("AdjustmentPanel — adding adjustments", () => {
 				accountId: "acc-1",
 				actualBalance: 2500,
 			}),
+		);
+	});
+
+	it("negates typed value before storing for amortizing accounts", async () => {
+		render(
+			<AdjustmentPanel
+				accounts={[loanAccount]}
+				baselineResult={{}}
+				fixedAccountId="loan-1"
+			/>,
+		);
+		fireEvent.change(screen.getByLabelText("Actual balance ($)"), {
+			target: { value: "18000" },
+		});
+		await act(async () => {
+			fireEvent.submit(
+				screen.getByLabelText("Actual balance ($)").closest("form")!,
+			);
+		});
+		expect(mockAddAdjustment).toHaveBeenCalledWith(
+			expect.objectContaining({ actualBalance: -18000 }),
 		);
 	});
 
@@ -194,6 +226,23 @@ describe("AdjustmentPanel — with adjustments", () => {
 		expect(screen.getByText("unknown-id")).toBeTruthy();
 	});
 
+	it("renders raw projected balance when account for adjustment is not found", () => {
+		const adjForUnknown: Adjustment = {
+			id: "adj-x",
+			accountId: "unknown-id",
+			date: "2024-01-15",
+			actualBalance: 500,
+		};
+		mockAdjustments.current = [adjForUnknown];
+		const baselineWithUnknown: ProjectionResult = {
+			"unknown-id": [{ date: "2024-01-15", balance: 400 }],
+		};
+		render(
+			<AdjustmentPanel accounts={accounts} baselineResult={baselineWithUnknown} />,
+		);
+		expect(screen.getByText("$400")).toBeTruthy();
+	});
+
 	it("shows '—' for variance when projected is null", () => {
 		const adjForUnknown: Adjustment = { ...adjustment, accountId: "x" };
 		mockAdjustments.current = [adjForUnknown];
@@ -239,6 +288,50 @@ describe("AdjustmentPanel — with adjustments", () => {
 		});
 		fireEvent.change(filterSelect, { target: { value: "acc-1" } });
 		expect(screen.queryByText("2024-01-16")).toBeNull();
+	});
+
+	it("displays amortizing actual balance as positive", () => {
+		const loanAdj: typeof adjustment = {
+			id: "adj-loan",
+			accountId: "loan-1",
+			date: "2024-01-15",
+			actualBalance: -16000,
+		};
+		mockAdjustments.current = [loanAdj];
+		const loanBaseline: ProjectionResult = {
+			"loan-1": [{ date: "2024-01-15", balance: -17000 }],
+		};
+		render(
+			<AdjustmentPanel
+				accounts={[loanAccount]}
+				baselineResult={loanBaseline}
+				fixedAccountId="loan-1"
+			/>,
+		);
+		expect(screen.getByText("$16,000")).toBeTruthy();
+		expect(screen.getByText("$17,000")).toBeTruthy();
+	});
+
+	it("shows positive variance (green) when amortizing actual is less owed than projected", () => {
+		const loanAdj: typeof adjustment = {
+			id: "adj-loan",
+			accountId: "loan-1",
+			date: "2024-01-15",
+			actualBalance: -16000,
+		};
+		mockAdjustments.current = [loanAdj];
+		const loanBaseline: ProjectionResult = {
+			"loan-1": [{ date: "2024-01-15", balance: -17000 }],
+		};
+		render(
+			<AdjustmentPanel
+				accounts={[loanAccount]}
+				baselineResult={loanBaseline}
+				fixedAccountId="loan-1"
+			/>,
+		);
+		// actual(-16000) - projected(-17000) = +1000 → green
+		expect(screen.getByText("+$1,000")).toBeTruthy();
 	});
 
 	it("calls deleteAdjustment when Delete button is clicked", async () => {

@@ -14,6 +14,7 @@ import { get } from "../api/client";
 import ScenarioManager from "../components/ScenarioManager";
 import type { ProjectionResult } from "../engine/types";
 import { useAccounts } from "../hooks/useAccounts";
+import { displayBalance } from "../utils/displayBalance";
 
 const PALETTE = [
 	"#2563eb",
@@ -145,13 +146,15 @@ export default function ProjectionView() {
 		const row: Record<string, string | number> = { date: date.slice(0, 7) };
 		for (const account of visibleAccounts) {
 			const point = (result[account.id] ?? []).find((p) => p.date === date);
-			row[account.id] = point ? Math.round(point.balance) : 0;
+			row[account.id] = point
+				? Math.round(displayBalance(account, point.balance))
+				: 0;
 			for (const [scId, scResult] of Object.entries(scenarioResults)) {
 				const scPoint = (scResult[account.id] ?? []).find(
 					(p) => p.date === date,
 				);
 				row[`${account.id}_${scId}`] = scPoint
-					? Math.round(scPoint.balance)
+					? Math.round(displayBalance(account, scPoint.balance))
 					: 0;
 			}
 		}

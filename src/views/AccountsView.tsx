@@ -5,6 +5,7 @@ import ExternalPartyForm from "../components/ExternalPartyForm";
 import type { Account, ExternalParty } from "../engine/types";
 import { useAccounts } from "../hooks/useAccounts";
 import { useExternalParties } from "../hooks/useExternalParties";
+import { displayBalance } from "../utils/displayBalance";
 
 function formatBalance(n: number) {
 	return new Intl.NumberFormat("en-US", {
@@ -134,10 +135,13 @@ export default function AccountsView() {
 										>
 											<span
 												style={{
-													color: a.seedBalance < 0 ? "#dc2626" : undefined,
+													color:
+														!a.amortizing && a.seedBalance < 0
+															? "#dc2626"
+															: undefined,
 												}}
 											>
-												{formatBalance(a.seedBalance)}
+												{formatBalance(displayBalance(a, a.seedBalance))}
 											</span>
 										</td>
 										<td>{a.seedDate}</td>
