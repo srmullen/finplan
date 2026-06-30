@@ -65,8 +65,7 @@ export default function AccountsView() {
 	].sort();
 
 	const sortedAccounts = [...accounts].sort(
-		(a, b) =>
-			a.owner.localeCompare(b.owner) || a.name.localeCompare(b.name),
+		(a, b) => a.owner.localeCompare(b.owner) || a.name.localeCompare(b.name),
 	);
 
 	return (
@@ -142,9 +141,7 @@ export default function AccountsView() {
 									</span>
 								</td>
 								<td>{formatDate(a.seedDate)}</td>
-								<td>
-									{a.rate !== 0 ? `${(a.rate * 100).toFixed(1)}%` : "—"}
-								</td>
+								<td>{a.rate !== 0 ? `${(a.rate * 100).toFixed(1)}%` : "—"}</td>
 								<td>{a.amortizing ? "amortizing" : "revolving"}</td>
 								<td style={styles.actions}>
 									<button
