@@ -155,7 +155,7 @@ describe("SchedulesView — with schedules", () => {
 
 	it("renders end date column", () => {
 		render(<SchedulesView />);
-		expect(screen.getByText("2024-12-31")).toBeTruthy();
+		expect(screen.getByText("Dec 31, 2024")).toBeTruthy();
 	});
 
 	it("renders '—' when end date is absent", () => {

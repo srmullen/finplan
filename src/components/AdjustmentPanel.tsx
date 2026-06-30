@@ -2,6 +2,7 @@ import { type FormEvent, useState } from "react";
 import type { Account, ProjectionResult } from "../engine/types";
 import { useAdjustments } from "../hooks/useAdjustments";
 import { displayBalance } from "../utils/displayBalance";
+import { formatDate } from "../utils/formatDate";
 import { generateId } from "../utils/id";
 
 interface Props {
@@ -134,7 +135,7 @@ export default function AdjustmentPanel({
 							</label>
 						</div>
 					)}
-					<table style={styles.table}>
+					<table className="data-table">
 						<thead>
 							<tr>
 								<th>Account</th>
@@ -167,7 +168,7 @@ export default function AdjustmentPanel({
 									return (
 										<tr key={adj.id}>
 											<td>{accountName(adj.accountId)}</td>
-											<td>{adj.date}</td>
+											<td>{formatDate(adj.date)}</td>
 											<td
 												style={{
 													textAlign: "right",
@@ -263,11 +264,6 @@ const styles = {
 		cursor: "pointer",
 		fontWeight: 600,
 		whiteSpace: "nowrap" as const,
-	},
-	table: {
-		width: "100%",
-		borderCollapse: "collapse" as const,
-		fontSize: "0.85rem",
 	},
 	deleteBtn: {
 		padding: "0.2rem 0.5rem",

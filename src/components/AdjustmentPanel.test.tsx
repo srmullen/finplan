@@ -186,7 +186,7 @@ describe("AdjustmentPanel — with adjustments", () => {
 		);
 		// "Checking" also appears in the account filter dropdown, so use getAllByText
 		expect(screen.getAllByText("Checking").length).toBeGreaterThan(0);
-		expect(screen.getByText("2024-01-15")).toBeTruthy();
+		expect(screen.getByText("Jan 15, 2024")).toBeTruthy();
 	});
 
 	it("shows positive variance in green", () => {
@@ -363,8 +363,8 @@ describe("AdjustmentPanel — with adjustments", () => {
 				fixedAccountId="acc-1"
 			/>,
 		);
-		expect(screen.getByText("2024-01-15")).toBeTruthy();
-		expect(screen.queryByText("2024-01-16")).toBeNull();
+		expect(screen.getByText("Jan 15, 2024")).toBeTruthy();
+		expect(screen.queryByText("Jan 16, 2024")).toBeNull();
 	});
 
 	it("hides account picker and filter when fixedAccountId is set", () => {
