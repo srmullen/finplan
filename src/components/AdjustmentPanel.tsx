@@ -6,6 +6,7 @@ import { generateId } from "../utils/id";
 interface Props {
 	accounts: Account[];
 	baselineResult: ProjectionResult;
+	fixedAccountId?: string;
 }
 
 function formatCurrency(n: number) {
@@ -27,11 +28,17 @@ function variance(
 	return point ? point.balance : null;
 }
 
-export default function AdjustmentPanel({ accounts, baselineResult }: Props) {
+export default function AdjustmentPanel({
+	accounts,
+	baselineResult,
+	fixedAccountId,
+}: Props) {
 	const { adjustments, addAdjustment, deleteAdjustment } = useAdjustments();
 	const today = new Date().toISOString().slice(0, 10);
 
-	const [accountId, setAccountId] = useState(accounts[0]?.id ?? "");
+	const [accountId, setAccountId] = useState(
+		fixedAccountId ?? accounts[0]?.id ?? "",
+	);
 	const [date, setDate] = useState(today);
 	const [balance, setBalance] = useState("");
 	const [filterAccountId, setFilterAccountId] = useState<string>("");
@@ -59,20 +66,22 @@ export default function AdjustmentPanel({ accounts, baselineResult }: Props) {
 			</p>
 
 			<form onSubmit={handleAdd} style={styles.form}>
-				<div style={styles.field}>
-					<label htmlFor="adj-account">Account</label>
-					<select
-						id="adj-account"
-						value={accountId}
-						onChange={(e) => setAccountId(e.target.value)}
-					>
-						{accounts.map((a) => (
-							<option key={a.id} value={a.id}>
-								{a.name}
-							</option>
-						))}
-					</select>
-				</div>
+				{!fixedAccountId && (
+					<div style={styles.field}>
+						<label htmlFor="adj-account">Account</label>
+						<select
+							id="adj-account"
+							value={accountId}
+							onChange={(e) => setAccountId(e.target.value)}
+						>
+							{accounts.map((a) => (
+								<option key={a.id} value={a.id}>
+									{a.name}
+								</option>
+							))}
+						</select>
+					</div>
+				)}
 				<div style={styles.field}>
 					<label htmlFor="adj-date">Date</label>
 					<input
@@ -103,22 +112,24 @@ export default function AdjustmentPanel({ accounts, baselineResult }: Props) {
 				<p style={styles.empty}>No adjustments recorded.</p>
 			) : (
 				<>
-					<div style={styles.filterRow}>
-						<label style={styles.filterLabel}>
-							Filter by account:{" "}
-							<select
-								value={filterAccountId}
-								onChange={(e) => setFilterAccountId(e.target.value)}
-							>
-								<option value="">Show all</option>
-								{accounts.map((a) => (
-									<option key={a.id} value={a.id}>
-										{a.name}
-									</option>
-								))}
-							</select>
-						</label>
-					</div>
+					{!fixedAccountId && (
+						<div style={styles.filterRow}>
+							<label style={styles.filterLabel}>
+								Filter by account:{" "}
+								<select
+									value={filterAccountId}
+									onChange={(e) => setFilterAccountId(e.target.value)}
+								>
+									<option value="">Show all</option>
+									{accounts.map((a) => (
+										<option key={a.id} value={a.id}>
+											{a.name}
+										</option>
+									))}
+								</select>
+							</label>
+						</div>
+					)}
 					<table style={styles.table}>
 						<thead>
 							<tr>
@@ -132,9 +143,10 @@ export default function AdjustmentPanel({ accounts, baselineResult }: Props) {
 						</thead>
 						<tbody>
 							{[...adjustments]
-								.filter(
-									(adj) =>
-										!filterAccountId || adj.accountId === filterAccountId,
+								.filter((adj) =>
+									fixedAccountId
+										? adj.accountId === fixedAccountId
+										: !filterAccountId || adj.accountId === filterAccountId,
 								)
 								.sort((a, b) => b.date.localeCompare(a.date))
 								.map((adj) => {

@@ -11,7 +11,6 @@ import {
 	YAxis,
 } from "recharts";
 import { get } from "../api/client";
-import AdjustmentPanel from "../components/AdjustmentPanel";
 import ScenarioManager from "../components/ScenarioManager";
 import type { ProjectionResult } from "../engine/types";
 import { useAccounts } from "../hooks/useAccounts";
@@ -66,11 +65,9 @@ function buildProjectionUrl(
 	startDate: string,
 	endDate: string,
 	scenarioId?: string,
-	noAdj?: boolean,
 ) {
 	const params = new URLSearchParams({ startDate, endDate });
 	if (scenarioId) params.set("scenarioId", scenarioId);
-	if (noAdj) params.set("noAdj", "1");
 	return `/api/projection?${params.toString()}`;
 }
 
@@ -78,14 +75,12 @@ export default function ProjectionView() {
 	const { accounts } = useAccounts();
 	const [horizonMonths, setHorizonMonths] = useState(12);
 	const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
-	const [showAdjustments, setShowAdjustments] = useState(false);
 	const [showScenarios, setShowScenarios] = useState(false);
 	const [activeScenarioIds, setActiveScenarioIds] = useState<Set<string>>(
 		new Set(),
 	);
 
 	const [result, setResult] = useState<ProjectionResult>({});
-	const [baselineNoAdj, setBaselineNoAdj] = useState<ProjectionResult>({});
 	const [scenarioResults, setScenarioResults] = useState<
 		Record<string, ProjectionResult>
 	>({});
@@ -107,22 +102,17 @@ export default function ProjectionView() {
 	useEffect(() => {
 		if (accounts.length === 0) {
 			setResult({});
-			setBaselineNoAdj({});
 			return;
 		}
 
 		const id = ++baselineFetchIdRef.current;
 
-		void Promise.all([
-			get<ProjectionResult>(buildProjectionUrl(startDate, endDate)),
-			get<ProjectionResult>(
-				buildProjectionUrl(startDate, endDate, undefined, true),
-			),
-		]).then(([main, noAdj]) => {
-			if (baselineFetchIdRef.current !== id) return;
-			setResult(main);
-			setBaselineNoAdj(noAdj);
-		});
+		void get<ProjectionResult>(buildProjectionUrl(startDate, endDate)).then(
+			(main) => {
+				if (baselineFetchIdRef.current !== id) return;
+				setResult(main);
+			},
+		);
 	}, [accounts, startDate, endDate]);
 
 	useEffect(() => {
@@ -236,13 +226,6 @@ export default function ProjectionView() {
 						Scenarios
 						{activeScenarioIds.size > 0 ? ` (${activeScenarioIds.size})` : ""}
 					</button>
-					<button
-						type="button"
-						style={styles.panelBtn}
-						onClick={() => setShowAdjustments((v) => !v)}
-					>
-						Adjustments
-					</button>
 				</div>
 			</div>
 
@@ -336,13 +319,6 @@ export default function ProjectionView() {
 						<ScenarioManager
 							activeScenarioIds={activeScenarioIds}
 							onToggleScenario={toggleScenario}
-						/>
-					)}
-
-					{showAdjustments && (
-						<AdjustmentPanel
-							accounts={accounts}
-							baselineResult={baselineNoAdj}
 						/>
 					)}
 				</>

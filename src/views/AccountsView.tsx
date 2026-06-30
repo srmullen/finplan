@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import AccountForm from "../components/AccountForm";
 import ExternalPartyForm from "../components/ExternalPartyForm";
 import type { Account, ExternalParty } from "../engine/types";
@@ -118,7 +119,11 @@ export default function AccountsView() {
 							<tbody>
 								{ownerAccounts.map((a) => (
 									<tr key={a.id}>
-										<td>{a.name}</td>
+										<td>
+											<Link to={`/accounts/${a.id}`} style={styles.nameLink}>
+												{a.name}
+											</Link>
+										</td>
 										<td>{a.institution ?? ""}</td>
 										<td>{a.type.replace("_", " ")}</td>
 										<td
@@ -275,5 +280,6 @@ const styles = {
 		fontSize: "0.8rem",
 	},
 	empty: { color: "#9ca3af", marginBottom: "1.5rem" },
+	nameLink: { color: "#1d4ed8", textDecoration: "none" },
 	divider: { margin: "2rem 0", borderColor: "#e5e7eb" },
 };
