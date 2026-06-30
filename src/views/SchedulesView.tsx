@@ -4,6 +4,7 @@ import type { Schedule } from "../engine/types";
 import { useAccounts } from "../hooks/useAccounts";
 import { useExternalParties } from "../hooks/useExternalParties";
 import { useSchedules } from "../hooks/useSchedules";
+import { formatDate } from "../utils/formatDate";
 
 export default function SchedulesView() {
 	const { schedules, addSchedule, updateSchedule, deleteSchedule } =
@@ -82,7 +83,7 @@ export default function SchedulesView() {
 			{schedules.length === 0 ? (
 				<p style={styles.empty}>No schedules yet.</p>
 			) : (
-				<table style={styles.table}>
+				<table className="data-table">
 					<thead>
 						<tr>
 							<th>From</th>
@@ -104,8 +105,8 @@ export default function SchedulesView() {
 								</td>
 								<td>{s.frequency}</td>
 								<td>{nodeLabel(s.destinationId)}</td>
-								<td>{s.startDate}</td>
-								<td>{s.endDate ?? "—"}</td>
+								<td>{formatDate(s.startDate)}</td>
+								<td>{s.endDate ? formatDate(s.endDate) : "—"}</td>
 								<td style={styles.actions}>
 									<button
 										type="button"
@@ -144,11 +145,6 @@ const styles = {
 		color: "#374151",
 		marginBottom: "1rem",
 		display: "block",
-	},
-	table: {
-		width: "100%",
-		borderCollapse: "collapse" as const,
-		fontSize: "0.875rem",
 	},
 	actions: {
 		textAlign: "right" as const,

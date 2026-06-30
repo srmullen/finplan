@@ -6,6 +6,7 @@ import type { Account, ExternalParty } from "../engine/types";
 import { useAccounts } from "../hooks/useAccounts";
 import { useExternalParties } from "../hooks/useExternalParties";
 import { displayBalance } from "../utils/displayBalance";
+import { formatDate } from "../utils/formatDate";
 
 function formatBalance(n: number) {
 	return new Intl.NumberFormat("en-US", {
@@ -63,13 +64,9 @@ export default function AccountsView() {
 		...new Set(accounts.map((a) => a.institution ?? "").filter(Boolean)),
 	].sort();
 
-	const distinctOwners = [...new Set(accounts.map((a) => a.owner))].sort();
-	const accountsByOwner = distinctOwners
-		.map((owner) => ({
-			owner,
-			accounts: accounts.filter((a) => a.owner === owner),
-		}))
-		.filter((g) => g.accounts.length > 0);
+	const sortedAccounts = [...accounts].sort(
+		(a, b) => a.owner.localeCompare(b.owner) || a.name.localeCompare(b.name),
+	);
 
 	return (
 		<div>
@@ -101,79 +98,74 @@ export default function AccountsView() {
 			{accounts.length === 0 ? (
 				<p style={styles.empty}>No accounts yet. Add one above.</p>
 			) : (
-				accountsByOwner.map(({ owner, accounts: ownerAccounts }) => (
-					<div key={owner} style={styles.group}>
-						<h2>{owner}</h2>
-						<table style={styles.table}>
-							<thead>
-								<tr>
-									<th>Name</th>
-									<th>Institution</th>
-									<th>Type</th>
-									<th style={{ textAlign: "right" }}>Balance</th>
-									<th>As of</th>
-									<th>Rate</th>
-									<th>Kind</th>
-									<th />
-								</tr>
-							</thead>
-							<tbody>
-								{ownerAccounts.map((a) => (
-									<tr key={a.id}>
-										<td>
-											<Link to={`/accounts/${a.id}`} style={styles.nameLink}>
-												{a.name}
-											</Link>
-										</td>
-										<td>{a.institution ?? ""}</td>
-										<td>{a.type.replace("_", " ")}</td>
-										<td
-											style={{
-												textAlign: "right",
-												fontVariantNumeric: "tabular-nums",
-											}}
-										>
-											<span
-												style={{
-													color:
-														!a.amortizing && a.seedBalance < 0
-															? "#dc2626"
-															: undefined,
-												}}
-											>
-												{formatBalance(displayBalance(a, a.seedBalance))}
-											</span>
-										</td>
-										<td>{a.seedDate}</td>
-										<td>
-											{a.rate !== 0 ? `${(a.rate * 100).toFixed(1)}%` : "—"}
-										</td>
-										<td>{a.amortizing ? "amortizing" : "revolving"}</td>
-										<td style={styles.actions}>
-											<button
-												type="button"
-												style={styles.editBtn}
-												onClick={() => {
-													setShowAccountForm(false);
-													setEditingAccount(a);
-												}}
-											>
-												Edit
-											</button>
-											<button
-												type="button"
-												style={styles.deleteBtn}
-												onClick={() => handleDeleteAccount(a.id)}
-											>
-												Delete
-											</button>
-										</td>
-									</tr>
-								))}
-							</tbody>
-						</table>
-					</div>
-				))
+				<table className="data-table">
+					<thead>
+						<tr>
+							<th>Name</th>
+							<th>Owner</th>
+							<th>Institution</th>
+							<th>Type</th>
+							<th style={{ textAlign: "right" }}>Balance</th>
+							<th>As of</th>
+							<th>Rate</th>
+							<th>Kind</th>
+							<th />
+						</tr>
+					</thead>
+					<tbody>
+						{sortedAccounts.map((a) => (
+							<tr key={a.id}>
+								<td>
+									<Link to={`/accounts/${a.id}`} style={styles.nameLink}>
+										{a.name}
+									</Link>
+								</td>
+								<td>{a.owner}</td>
+								<td>{a.institution ?? ""}</td>
+								<td>{a.type.replace("_", " ")}</td>
+								<td
+									style={{
+										textAlign: "right",
+										fontVariantNumeric: "tabular-nums",
+									}}
+								>
+									<span
+										style={{
+											color:
+												!a.amortizing && a.seedBalance < 0
+													? "#dc2626"
+													: undefined,
+										}}
+									>
+										{formatBalance(displayBalance(a, a.seedBalance))}
+									</span>
+								</td>
+								<td>{formatDate(a.seedDate)}</td>
+								<td>{a.rate !== 0 ? `${(a.rate * 100).toFixed(1)}%` : "—"}</td>
+								<td>{a.amortizing ? "amortizing" : "revolving"}</td>
+								<td style={styles.actions}>
+									<button
+										type="button"
+										style={styles.editBtn}
+										onClick={() => {
+											setShowAccountForm(false);
+											setEditingAccount(a);
+										}}
+									>
+										Edit
+									</button>
+									<button
+										type="button"
+										style={styles.deleteBtn}
+										onClick={() => handleDeleteAccount(a.id)}
+									>
+										Delete
+									</button>
+								</td>
+							</tr>
+						))}
+					</tbody>
+				</table>
 			)}
 
 			<hr style={styles.divider} />
@@ -204,7 +196,7 @@ export default function AccountsView() {
 			{externalParties.length === 0 ? (
 				<p style={styles.empty}>No external parties yet.</p>
 			) : (
-				<table style={styles.table}>
+				<table className="data-table">
 					<thead>
 						<tr>
 							<th>Name</th>
@@ -253,12 +245,6 @@ const styles = {
 		color: "#374151",
 		marginBottom: "1rem",
 		display: "block",
-	},
-	group: { marginBottom: "1.5rem" },
-	table: {
-		width: "100%",
-		borderCollapse: "collapse" as const,
-		fontSize: "0.875rem",
 	},
 	actions: {
 		textAlign: "right" as const,
