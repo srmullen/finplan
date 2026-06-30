@@ -1,8 +1,8 @@
 import { type FormEvent, useState } from "react";
 import type { Account, ProjectionResult } from "../engine/types";
 import { useAdjustments } from "../hooks/useAdjustments";
-import { generateId } from "../utils/id";
 import { displayBalance } from "../utils/displayBalance";
+import { generateId } from "../utils/id";
 
 interface Props {
 	accounts: Account[];
