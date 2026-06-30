@@ -226,6 +226,23 @@ describe("AdjustmentPanel — with adjustments", () => {
 		expect(screen.getByText("unknown-id")).toBeTruthy();
 	});
 
+	it("renders raw projected balance when account for adjustment is not found", () => {
+		const adjForUnknown: Adjustment = {
+			id: "adj-x",
+			accountId: "unknown-id",
+			date: "2024-01-15",
+			actualBalance: 500,
+		};
+		mockAdjustments.current = [adjForUnknown];
+		const baselineWithUnknown: ProjectionResult = {
+			"unknown-id": [{ date: "2024-01-15", balance: 400 }],
+		};
+		render(
+			<AdjustmentPanel accounts={accounts} baselineResult={baselineWithUnknown} />,
+		);
+		expect(screen.getByText("$400")).toBeTruthy();
+	});
+
 	it("shows '—' for variance when projected is null", () => {
 		const adjForUnknown: Adjustment = { ...adjustment, accountId: "x" };
 		mockAdjustments.current = [adjForUnknown];
