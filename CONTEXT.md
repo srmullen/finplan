@@ -38,6 +38,10 @@ _Avoid_: Open-end account
 
 ### Edges
 
+**Payment Group**:
+A named collection of Schedules that together represent a single real-world payment outflow from one source account. Used when a payment fans out to multiple destinations (e.g., a mortgage payment split between the loan account and an escrow servicer). All member Schedules must share the same source account. Displayed in the UI as a group header followed by its member Schedules. Deleting a Payment Group deletes all its members. Called `ScheduleGroup` in code.
+_Avoid_: Split payment, compound schedule, payment bundle
+
 **Transfer**:
 A single movement of money from one node to another at a specific point in time. The atomic unit of money flow — one event, two balance changes.
 _Avoid_: Transaction, payment, movement
