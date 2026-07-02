@@ -168,9 +168,7 @@ export function createApp(stores: Stores, apiKey: string): Hono {
 
 	// --- Schedule Groups ---
 
-	app.get("/api/schedule-groups", (c) =>
-		c.json(stores.scheduleGroups.list()),
-	);
+	app.get("/api/schedule-groups", (c) => c.json(stores.scheduleGroups.list()));
 
 	app.get("/api/schedule-groups/:id", (c) => {
 		const group = stores.scheduleGroups.get(c.req.param("id"));

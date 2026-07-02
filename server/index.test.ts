@@ -85,8 +85,8 @@ function makeScheduleStore(): ScheduleStore {
 	};
 }
 
-function makeScheduleGroupStore(): ScheduleGroupStore {
-	const items: ScheduleGroup[] = [];
+function makeScheduleGroupStore(initial: ScheduleGroup[] = []): ScheduleGroupStore {
+	const items: ScheduleGroup[] = [...initial];
 	return {
 		list: () => [...items],
 		get: (id) => items.find((g) => g.id === id) ?? null,
@@ -456,6 +456,38 @@ describe("DELETE /api/schedules/:id", () => {
 	it("returns 204", async () => {
 		const res = await req("/api/schedules/s-1", "DELETE");
 		expect(res.status).toBe(204);
+	});
+});
+
+describe("GET /api/schedule-groups", () => {
+	it("returns empty array", async () => {
+		const res = await req("/api/schedule-groups");
+		expect(res.status).toBe(200);
+		expect(await res.json()).toEqual([]);
+	});
+});
+
+describe("GET /api/schedule-groups/:id", () => {
+	it("returns 404 when not found", async () => {
+		const res = await req("/api/schedule-groups/nonexistent");
+		expect(res.status).toBe(404);
+	});
+
+	it("returns group when found", async () => {
+		const stores = {
+			...makeStores(),
+			scheduleGroups: makeScheduleGroupStore([
+				{ id: "g-1", name: "Mortgage" },
+			]),
+		};
+		const a = createApp(stores, "test-key");
+		const res = await a.fetch(
+			new Request("http://localhost/api/schedule-groups/g-1", {
+				headers: { Authorization: AUTH },
+			}),
+		);
+		expect(res.status).toBe(200);
+		expect(await res.json()).toEqual({ id: "g-1", name: "Mortgage" });
 	});
 });
 
