@@ -5,6 +5,7 @@ import type {
 	ExternalParty,
 	Scenario,
 	Schedule,
+	ScheduleGroup,
 } from "../src/engine/types";
 import { createApp } from "./index";
 import type {
@@ -12,6 +13,7 @@ import type {
 	AdjustmentStore,
 	ExternalPartyStore,
 	ScenarioStore,
+	ScheduleGroupStore,
 	ScheduleStore,
 	Stores,
 } from "./index";
@@ -83,6 +85,14 @@ function makeScheduleStore(): ScheduleStore {
 	};
 }
 
+function makeScheduleGroupStore(): ScheduleGroupStore {
+	const items: ScheduleGroup[] = [];
+	return {
+		list: () => [...items],
+		get: (id) => items.find((g) => g.id === id) ?? null,
+	};
+}
+
 function makeAdjustmentStore(): AdjustmentStore {
 	const items: Adjustment[] = [];
 	return {
@@ -121,6 +131,7 @@ function makeStores(): Stores {
 		accounts: makeAccountStore(),
 		parties: makePartyStore(),
 		schedules: makeScheduleStore(),
+		scheduleGroups: makeScheduleGroupStore(),
 		adjustments: makeAdjustmentStore(),
 		scenarios: makeScenarioStore(),
 	};

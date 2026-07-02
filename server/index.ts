@@ -8,6 +8,7 @@ import type {
 	ExternalParty,
 	Scenario,
 	Schedule,
+	ScheduleGroup,
 } from "../src/engine/types";
 
 export interface AccountStore {
@@ -34,6 +35,11 @@ export interface ScheduleStore {
 	remove(id: string): void;
 }
 
+export interface ScheduleGroupStore {
+	list(): ScheduleGroup[];
+	get(id: string): ScheduleGroup | null;
+}
+
 export interface AdjustmentStore {
 	list(): Adjustment[];
 	create(adjustment: Adjustment): void;
@@ -51,6 +57,7 @@ export interface ScenarioStore {
 export interface Stores {
 	accounts: AccountStore;
 	schedules: ScheduleStore;
+	scheduleGroups: ScheduleGroupStore;
 	parties: ExternalPartyStore;
 	scenarios: ScenarioStore;
 	adjustments: AdjustmentStore;
@@ -157,6 +164,18 @@ export function createApp(stores: Stores, apiKey: string): Hono {
 	app.delete("/api/schedules/:id", (c) => {
 		stores.schedules.remove(c.req.param("id"));
 		return c.body(null, 204);
+	});
+
+	// --- Schedule Groups ---
+
+	app.get("/api/schedule-groups", (c) =>
+		c.json(stores.scheduleGroups.list()),
+	);
+
+	app.get("/api/schedule-groups/:id", (c) => {
+		const group = stores.scheduleGroups.get(c.req.param("id"));
+		if (!group) return c.json({ error: "Not found" }, 404);
+		return c.json(group);
 	});
 
 	// --- Adjustments ---

@@ -1,14 +1,16 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import ScheduleForm from "../components/ScheduleForm";
 import type { Schedule } from "../engine/types";
 import { useAccounts } from "../hooks/useAccounts";
 import { useExternalParties } from "../hooks/useExternalParties";
+import { useScheduleGroups } from "../hooks/useScheduleGroups";
 import { useSchedules } from "../hooks/useSchedules";
 import { formatDate } from "../utils/formatDate";
 
 export default function SchedulesView() {
 	const { schedules, addSchedule, updateSchedule, deleteSchedule } =
 		useSchedules();
+	const { scheduleGroups } = useScheduleGroups();
 	const { accounts } = useAccounts();
 	const { externalParties } = useExternalParties();
 	const [showForm, setShowForm] = useState(false);
@@ -39,6 +41,52 @@ export default function SchedulesView() {
 	}
 
 	const noNodes = accounts.length + externalParties.length < 2;
+
+	const groups = scheduleGroups
+		.map((group) => ({
+			group,
+			members: schedules.filter((s) => s.groupId === group.id),
+		}))
+		.filter(({ members }) => members.length > 0);
+	const groupedIds = new Set(
+		groups.flatMap(({ members }) => members.map((s) => s.id)),
+	);
+	const ungroupedSchedules = schedules.filter((s) => !groupedIds.has(s.id));
+
+	const renderScheduleRow = (s: Schedule, indented: boolean) => (
+		<tr key={s.id}>
+			<td style={indented ? styles.indentedCell : undefined}>
+				{nodeLabel(s.sourceId)}
+			</td>
+			<td style={{ fontVariantNumeric: "tabular-nums" }}>
+				${s.amount.toLocaleString()}
+				{s.estimated ? " ~" : ""}
+			</td>
+			<td>{s.frequency}</td>
+			<td>{nodeLabel(s.destinationId)}</td>
+			<td>{formatDate(s.startDate)}</td>
+			<td>{s.endDate ? formatDate(s.endDate) : "—"}</td>
+			<td style={styles.actions}>
+				<button
+					type="button"
+					style={styles.editBtn}
+					onClick={() => {
+						setShowForm(false);
+						setEditing(s);
+					}}
+				>
+					Edit
+				</button>
+				<button
+					type="button"
+					style={styles.deleteBtn}
+					onClick={() => handleDeleteSchedule(s.id)}
+				>
+					Delete
+				</button>
+			</td>
+		</tr>
+	);
 
 	return (
 		<div>
@@ -96,38 +144,17 @@ export default function SchedulesView() {
 						</tr>
 					</thead>
 					<tbody>
-						{schedules.map((s) => (
-							<tr key={s.id}>
-								<td>{nodeLabel(s.sourceId)}</td>
-								<td style={{ fontVariantNumeric: "tabular-nums" }}>
-									${s.amount.toLocaleString()}
-									{s.estimated ? " ~" : ""}
-								</td>
-								<td>{s.frequency}</td>
-								<td>{nodeLabel(s.destinationId)}</td>
-								<td>{formatDate(s.startDate)}</td>
-								<td>{s.endDate ? formatDate(s.endDate) : "—"}</td>
-								<td style={styles.actions}>
-									<button
-										type="button"
-										style={styles.editBtn}
-										onClick={() => {
-											setShowForm(false);
-											setEditing(s);
-										}}
-									>
-										Edit
-									</button>
-									<button
-										type="button"
-										style={styles.deleteBtn}
-										onClick={() => handleDeleteSchedule(s.id)}
-									>
-										Delete
-									</button>
-								</td>
-							</tr>
+						{groups.map(({ group, members }) => (
+							<Fragment key={group.id}>
+								<tr>
+									<td colSpan={7} style={styles.groupHeaderCell}>
+										{group.name}
+									</td>
+								</tr>
+								{members.map((s) => renderScheduleRow(s, true))}
+							</Fragment>
 						))}
+						{ungroupedSchedules.map((s) => renderScheduleRow(s, false))}
 					</tbody>
 				</table>
 			)}
@@ -171,4 +198,10 @@ const styles = {
 	},
 	empty: { color: "#9ca3af" },
 	hint: { color: "#9ca3af", fontSize: "0.8rem", marginBottom: "1rem" },
+	groupHeaderCell: {
+		fontWeight: 600,
+		background: "#f9fafb",
+		color: "#374151",
+	},
+	indentedCell: { paddingLeft: "1.5rem" },
 };

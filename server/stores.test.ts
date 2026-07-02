@@ -205,6 +205,51 @@ describe("schedules store", () => {
 		stores.schedules.remove("s1");
 		expect(stores.schedules.list()).toHaveLength(0);
 	});
+
+	it("includes groupId when present", () => {
+		db.prepare("INSERT INTO schedule_groups (id, name) VALUES (?, ?)").run(
+			"g1",
+			"Mortgage",
+		);
+		stores.schedules.create({ ...schedule, groupId: "g1" });
+		expect(stores.schedules.list()[0]?.groupId).toBe("g1");
+	});
+
+	it("omits groupId when null in db", () => {
+		stores.schedules.create(schedule);
+		expect(stores.schedules.list()[0]?.groupId).toBeUndefined();
+	});
+});
+
+describe("schedule groups store", () => {
+	it("list returns empty array initially", () => {
+		expect(stores.scheduleGroups.list()).toEqual([]);
+	});
+
+	it("list returns groups inserted directly", () => {
+		db.prepare("INSERT INTO schedule_groups (id, name) VALUES (?, ?)").run(
+			"g1",
+			"Mortgage",
+		);
+		expect(stores.scheduleGroups.list()).toEqual([
+			{ id: "g1", name: "Mortgage" },
+		]);
+	});
+
+	it("get returns group by id", () => {
+		db.prepare("INSERT INTO schedule_groups (id, name) VALUES (?, ?)").run(
+			"g1",
+			"Mortgage",
+		);
+		expect(stores.scheduleGroups.get("g1")).toEqual({
+			id: "g1",
+			name: "Mortgage",
+		});
+	});
+
+	it("get returns null when not found", () => {
+		expect(stores.scheduleGroups.get("missing")).toBeNull();
+	});
 });
 
 describe("adjustments store", () => {
@@ -344,5 +389,25 @@ describe("schema migration", () => {
 			amortizing: false,
 		});
 		expect(legacyStores.accounts.get("legacy-1")?.institution).toBe("Chase");
+	});
+
+	it("adds group_id column to schedules tables that predate the field", () => {
+		const legacyDb = new Database(":memory:");
+		legacyDb.exec(
+			"CREATE TABLE schedules (id TEXT PRIMARY KEY, source_id TEXT NOT NULL, destination_id TEXT NOT NULL, amount REAL NOT NULL, estimated INTEGER NOT NULL DEFAULT 0, frequency TEXT NOT NULL, start_date TEXT NOT NULL, end_date TEXT, terminate_at_zero INTEGER NOT NULL DEFAULT 0)",
+		);
+		const legacyStores = createSQLiteStores(legacyDb);
+		legacyStores.schedules.create({
+			id: "legacy-s1",
+			sourceId: "p1",
+			destinationId: "a1",
+			amount: 500,
+			estimated: false,
+			frequency: "monthly",
+			startDate: "2024-01-01",
+			terminateAtZero: false,
+			groupId: "g1",
+		});
+		expect(legacyStores.schedules.get("legacy-s1")?.groupId).toBe("g1");
 	});
 });
