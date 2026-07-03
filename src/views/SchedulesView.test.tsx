@@ -28,6 +28,8 @@ import SchedulesView from "./SchedulesView";
 const mockAddSchedule = vi.fn();
 const mockUpdateSchedule = vi.fn();
 const mockDeleteSchedule = vi.fn();
+const mockRefreshSchedules = vi.fn();
+const mockAddGroup = vi.fn();
 
 const account: Account = {
 	id: "acc-1",
@@ -65,10 +67,13 @@ function setupMocks(
 		addSchedule: mockAddSchedule,
 		updateSchedule: mockUpdateSchedule,
 		deleteSchedule: mockDeleteSchedule,
+		refresh: mockRefreshSchedules,
 		error: null,
 	} as ReturnType<typeof useSchedules>);
 	vi.mocked(useScheduleGroups).mockReturnValue({
 		scheduleGroups,
+		addGroup: mockAddGroup,
+		refresh: vi.fn(),
 		error: null,
 	} as ReturnType<typeof useScheduleGroups>);
 	vi.mocked(useAccounts).mockReturnValue({
@@ -116,6 +121,14 @@ describe("SchedulesView — empty state (no nodes)", () => {
 		}) as HTMLButtonElement;
 		expect(btn.disabled).toBe(true);
 	});
+
+	it("disables Add Payment Group button when fewer than 2 nodes", () => {
+		render(<SchedulesView />);
+		const btn = screen.getByRole("button", {
+			name: "+ Add payment group",
+		}) as HTMLButtonElement;
+		expect(btn.disabled).toBe(true);
+	});
 });
 
 describe("SchedulesView — with nodes (2+ nodes)", () => {
@@ -147,6 +160,51 @@ describe("SchedulesView — with nodes (2+ nodes)", () => {
 			fireEvent.submit(screen.getByLabelText("Amount ($)").closest("form")!);
 		});
 		expect(mockAddSchedule).toHaveBeenCalled();
+	});
+
+	it("enables Add Payment Group button when 2+ nodes exist", () => {
+		render(<SchedulesView />);
+		const btn = screen.getByRole("button", {
+			name: "+ Add payment group",
+		}) as HTMLButtonElement;
+		expect(btn.disabled).toBe(false);
+	});
+
+	it("shows ScheduleGroupForm when Add Payment Group is clicked, hides on Cancel", () => {
+		render(<SchedulesView />);
+		fireEvent.click(
+			screen.getByRole("button", { name: "+ Add payment group" }),
+		);
+		expect(screen.getByLabelText("Group name")).toBeTruthy();
+		fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+		expect(screen.queryByLabelText("Group name")).toBeNull();
+	});
+
+	it("calls addGroup and refreshes schedules on save, then hides the form", async () => {
+		mockAddGroup.mockResolvedValue(undefined);
+		render(<SchedulesView />);
+		fireEvent.click(
+			screen.getByRole("button", { name: "+ Add payment group" }),
+		);
+		fireEvent.change(screen.getByLabelText("Group name"), {
+			target: { value: "Mortgage" },
+		});
+		fireEvent.change(screen.getAllByLabelText("Amount ($)")[0], {
+			target: { value: "1500" },
+		});
+		fireEvent.change(screen.getAllByLabelText("Amount ($)")[1], {
+			target: { value: "500" },
+		});
+		await act(async () => {
+			fireEvent.submit(
+				screen
+					.getByRole("button", { name: "Add payment group" })
+					.closest("form")!,
+			);
+		});
+		expect(mockAddGroup).toHaveBeenCalled();
+		expect(mockRefreshSchedules).toHaveBeenCalled();
+		expect(screen.queryByLabelText("Group name")).toBeNull();
 	});
 });
 

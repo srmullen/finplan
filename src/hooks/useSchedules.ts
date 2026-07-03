@@ -59,5 +59,12 @@ export function useSchedules() {
 		await refresh();
 	}
 
-	return { schedules, error, addSchedule, updateSchedule, deleteSchedule };
+	return {
+		schedules,
+		error,
+		addSchedule,
+		updateSchedule,
+		deleteSchedule,
+		refresh,
+	};
 }

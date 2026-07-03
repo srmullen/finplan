@@ -54,6 +54,11 @@ export interface ScheduleGroup {
 	name: string;
 }
 
+export interface ScheduleGroupWithMembers {
+	group: ScheduleGroup;
+	schedules: Schedule[];
+}
+
 export interface Adjustment {
 	id: string;
 	accountId: string;

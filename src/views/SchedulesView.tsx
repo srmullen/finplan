@@ -1,6 +1,7 @@
 import { Fragment, useState } from "react";
 import ScheduleForm from "../components/ScheduleForm";
-import type { Schedule } from "../engine/types";
+import ScheduleGroupForm from "../components/ScheduleGroupForm";
+import type { Schedule, ScheduleGroupWithMembers } from "../engine/types";
 import { useAccounts } from "../hooks/useAccounts";
 import { useExternalParties } from "../hooks/useExternalParties";
 import { useScheduleGroups } from "../hooks/useScheduleGroups";
@@ -8,12 +9,18 @@ import { useSchedules } from "../hooks/useSchedules";
 import { formatDate } from "../utils/formatDate";
 
 export default function SchedulesView() {
-	const { schedules, addSchedule, updateSchedule, deleteSchedule } =
-		useSchedules();
-	const { scheduleGroups } = useScheduleGroups();
+	const {
+		schedules,
+		addSchedule,
+		updateSchedule,
+		deleteSchedule,
+		refresh: refreshSchedules,
+	} = useSchedules();
+	const { scheduleGroups, addGroup } = useScheduleGroups();
 	const { accounts } = useAccounts();
 	const { externalParties } = useExternalParties();
 	const [showForm, setShowForm] = useState(false);
+	const [showGroupForm, setShowGroupForm] = useState(false);
 	const [editing, setEditing] = useState<Schedule | null>(null);
 
 	const nodeLabel = (id: string) => {
@@ -32,6 +39,12 @@ export default function SchedulesView() {
 			void addSchedule(schedule);
 			setShowForm(false);
 		}
+	}
+
+	async function saveGroup(input: ScheduleGroupWithMembers) {
+		await addGroup(input);
+		await refreshSchedules();
+		setShowGroupForm(false);
 	}
 
 	function handleDeleteSchedule(id: string) {
@@ -105,20 +118,44 @@ export default function SchedulesView() {
 				/>
 			)}
 
-			{!showForm && !editing && (
-				<button
-					type="button"
-					style={styles.addBtn}
-					onClick={() => setShowForm(true)}
-					disabled={noNodes}
-					title={
-						noNodes
-							? "Add at least two accounts or external parties first"
-							: undefined
-					}
-				>
-					+ Add schedule
-				</button>
+			{showGroupForm && (
+				<ScheduleGroupForm
+					accounts={accounts}
+					externalParties={externalParties}
+					onSave={saveGroup}
+					onCancel={() => setShowGroupForm(false)}
+				/>
+			)}
+
+			{!showForm && !editing && !showGroupForm && (
+				<div style={styles.addBtnRow}>
+					<button
+						type="button"
+						style={styles.addBtn}
+						onClick={() => setShowForm(true)}
+						disabled={noNodes}
+						title={
+							noNodes
+								? "Add at least two accounts or external parties first"
+								: undefined
+						}
+					>
+						+ Add schedule
+					</button>
+					<button
+						type="button"
+						style={styles.addBtn}
+						onClick={() => setShowGroupForm(true)}
+						disabled={noNodes}
+						title={
+							noNodes
+								? "Add at least two accounts or external parties first"
+								: undefined
+						}
+					>
+						+ Add payment group
+					</button>
+				</div>
 			)}
 
 			{noNodes && (
@@ -163,6 +200,11 @@ export default function SchedulesView() {
 }
 
 const styles = {
+	addBtnRow: {
+		display: "flex",
+		gap: "0.5rem",
+		marginBottom: "1rem",
+	},
 	addBtn: {
 		padding: "0.4rem 0.875rem",
 		border: "1px dashed #9ca3af",
@@ -170,8 +212,6 @@ const styles = {
 		background: "none",
 		cursor: "pointer",
 		color: "#374151",
-		marginBottom: "1rem",
-		display: "block",
 	},
 	actions: {
 		textAlign: "right" as const,

@@ -250,6 +250,41 @@ describe("schedule groups store", () => {
 	it("get returns null when not found", () => {
 		expect(stores.scheduleGroups.get("missing")).toBeNull();
 	});
+
+	it("createWithMembers creates the group and all member schedules", () => {
+		stores.scheduleGroups.createWithMembers({ id: "g1", name: "Mortgage" }, [
+			{
+				id: "s1",
+				sourceId: "acc-1",
+				destinationId: "loan-1",
+				amount: 1500,
+				estimated: false,
+				frequency: "monthly",
+				startDate: "2024-01-01",
+				terminateAtZero: false,
+				groupId: "g1",
+			},
+			{
+				id: "s2",
+				sourceId: "acc-1",
+				destinationId: "party-1",
+				amount: 500,
+				estimated: false,
+				frequency: "monthly",
+				startDate: "2024-01-01",
+				terminateAtZero: false,
+				groupId: "g1",
+			},
+		]);
+		expect(stores.scheduleGroups.get("g1")).toEqual({
+			id: "g1",
+			name: "Mortgage",
+		});
+		expect(stores.schedules.list()).toHaveLength(2);
+		expect(stores.schedules.list().every((s) => s.groupId === "g1")).toBe(
+			true,
+		);
+	});
 });
 
 describe("adjustments store", () => {

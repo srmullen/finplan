@@ -9,6 +9,7 @@ import type {
 	Scenario,
 	Schedule,
 	ScheduleGroup,
+	ScheduleGroupWithMembers,
 } from "../src/engine/types";
 
 export interface AccountStore {
@@ -38,6 +39,7 @@ export interface ScheduleStore {
 export interface ScheduleGroupStore {
 	list(): ScheduleGroup[];
 	get(id: string): ScheduleGroup | null;
+	createWithMembers(group: ScheduleGroup, schedules: Schedule[]): void;
 }
 
 export interface AdjustmentStore {
@@ -169,6 +171,27 @@ export function createApp(stores: Stores, apiKey: string): Hono {
 	// --- Schedule Groups ---
 
 	app.get("/api/schedule-groups", (c) => c.json(stores.scheduleGroups.list()));
+
+	app.post("/api/schedule-groups", async (c) => {
+		const body = await c.req.json<ScheduleGroupWithMembers>();
+		const { group, schedules } = body;
+		if (schedules.length < 2) {
+			return c.json(
+				{ error: "A payment group requires at least two member schedules" },
+				400,
+			);
+		}
+		const sourceIds = new Set(schedules.map((s) => s.sourceId));
+		if (sourceIds.size > 1) {
+			return c.json(
+				{ error: "All member schedules must share the same source account" },
+				400,
+			);
+		}
+		const members = schedules.map((s) => ({ ...s, groupId: group.id }));
+		stores.scheduleGroups.createWithMembers(group, members);
+		return c.json({ group, schedules: members }, 201);
+	});
 
 	app.get("/api/schedule-groups/:id", (c) => {
 		const group = stores.scheduleGroups.get(c.req.param("id"));

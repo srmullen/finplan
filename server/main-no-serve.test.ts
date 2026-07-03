@@ -18,6 +18,9 @@ vi.mock("better-sqlite3", () => ({
 		prepare() {
 			return { run: () => {}, get: () => null, all: () => [] };
 		}
+		transaction(fn: (...args: unknown[]) => unknown) {
+			return fn;
+		}
 	},
 }));
 
