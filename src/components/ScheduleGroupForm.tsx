@@ -223,7 +223,9 @@ export default function ScheduleGroupForm({
 									id={`member-${index}-end`}
 									type="date"
 									value={row.endDate}
-									onChange={(e) => updateRow(index, { endDate: e.target.value })}
+									onChange={(e) =>
+										updateRow(index, { endDate: e.target.value })
+									}
 								/>
 							</div>
 						</div>
