@@ -16,7 +16,9 @@
 		"check": "biome check .",
 		"fix": "biome check --write .",
 		"server": "tsx --env-file=.env server/main.ts",
-		"ci": "dagger call ci --source=."
+		"ci": "dagger call ci --source=.",
+		"new-feature": "scripts/new-feature.sh",
+		"done-feature": "scripts/done-feature.sh"
 	},
 	"dependencies": {
 		"@hono/node-server": "^2.0.6",
