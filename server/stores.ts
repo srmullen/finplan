@@ -304,6 +304,17 @@ export function createSQLiteStores(db: Database.Database): Stores {
 				.get(id) as Record<string, unknown> | null;
 			return row ? rowToScheduleGroup(row) : null;
 		},
+		createWithMembers: db.transaction(
+			(group: ScheduleGroup, memberSchedules: Schedule[]) => {
+				db.prepare("INSERT INTO schedule_groups (id, name) VALUES (?, ?)").run(
+					group.id,
+					group.name,
+				);
+				for (const schedule of memberSchedules) {
+					schedules.create(schedule);
+				}
+			},
+		),
 	};
 
 	const adjustments: AdjustmentStore = {

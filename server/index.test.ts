@@ -85,11 +85,18 @@ function makeScheduleStore(): ScheduleStore {
 	};
 }
 
-function makeScheduleGroupStore(initial: ScheduleGroup[] = []): ScheduleGroupStore {
+function makeScheduleGroupStore(
+	scheduleStore: ScheduleStore,
+	initial: ScheduleGroup[] = [],
+): ScheduleGroupStore {
 	const items: ScheduleGroup[] = [...initial];
 	return {
 		list: () => [...items],
 		get: (id) => items.find((g) => g.id === id) ?? null,
+		createWithMembers: (group, memberSchedules) => {
+			items.push(group);
+			for (const schedule of memberSchedules) scheduleStore.create(schedule);
+		},
 	};
 }
 
@@ -127,11 +134,12 @@ function makeScenarioStore(): ScenarioStore {
 }
 
 function makeStores(): Stores {
+	const scheduleStore = makeScheduleStore();
 	return {
 		accounts: makeAccountStore(),
 		parties: makePartyStore(),
-		schedules: makeScheduleStore(),
-		scheduleGroups: makeScheduleGroupStore(),
+		schedules: scheduleStore,
+		scheduleGroups: makeScheduleGroupStore(scheduleStore),
 		adjustments: makeAdjustmentStore(),
 		scenarios: makeScenarioStore(),
 	};
@@ -467,6 +475,90 @@ describe("GET /api/schedule-groups", () => {
 	});
 });
 
+describe("POST /api/schedule-groups", () => {
+	const memberA: Schedule = {
+		id: "s-a",
+		sourceId: "acc-1",
+		destinationId: "loan-1",
+		amount: 1500,
+		estimated: false,
+		frequency: "monthly",
+		startDate: "2024-01-01",
+		terminateAtZero: false,
+	};
+	const memberB: Schedule = {
+		id: "s-b",
+		sourceId: "acc-1",
+		destinationId: "party-1",
+		amount: 500,
+		estimated: false,
+		frequency: "monthly",
+		startDate: "2024-01-01",
+		terminateAtZero: false,
+	};
+
+	it("creates the group and all member schedules atomically, returns 201", async () => {
+		const stores = makeStores();
+		const app2 = createApp(stores, "test-key");
+		const res = await app2.fetch(
+			new Request("http://localhost/api/schedule-groups", {
+				method: "POST",
+				headers: { Authorization: AUTH, "Content-Type": "application/json" },
+				body: JSON.stringify({
+					group: { id: "g-1", name: "Mortgage" },
+					schedules: [memberA, memberB],
+				}),
+			}),
+		);
+		expect(res.status).toBe(201);
+		expect(stores.scheduleGroups.list()).toEqual([
+			{ id: "g-1", name: "Mortgage" },
+		]);
+		expect(stores.schedules.list()).toHaveLength(2);
+		expect(stores.schedules.list().every((s) => s.groupId === "g-1")).toBe(
+			true,
+		);
+	});
+
+	it("returns 400 and creates nothing when fewer than two member schedules are provided", async () => {
+		const stores = makeStores();
+		const app2 = createApp(stores, "test-key");
+		const res = await app2.fetch(
+			new Request("http://localhost/api/schedule-groups", {
+				method: "POST",
+				headers: { Authorization: AUTH, "Content-Type": "application/json" },
+				body: JSON.stringify({
+					group: { id: "g-1", name: "Mortgage" },
+					schedules: [memberA],
+				}),
+			}),
+		);
+		expect(res.status).toBe(400);
+		expect(await res.json()).toMatchObject({ error: expect.any(String) });
+		expect(stores.scheduleGroups.list()).toEqual([]);
+		expect(stores.schedules.list()).toEqual([]);
+	});
+
+	it("returns 400 and creates nothing when member schedules do not share a source account", async () => {
+		const stores = makeStores();
+		const app2 = createApp(stores, "test-key");
+		const res = await app2.fetch(
+			new Request("http://localhost/api/schedule-groups", {
+				method: "POST",
+				headers: { Authorization: AUTH, "Content-Type": "application/json" },
+				body: JSON.stringify({
+					group: { id: "g-1", name: "Mortgage" },
+					schedules: [memberA, { ...memberB, sourceId: "other-acc" }],
+				}),
+			}),
+		);
+		expect(res.status).toBe(400);
+		expect(await res.json()).toMatchObject({ error: expect.any(String) });
+		expect(stores.scheduleGroups.list()).toEqual([]);
+		expect(stores.schedules.list()).toEqual([]);
+	});
+});
+
 describe("GET /api/schedule-groups/:id", () => {
 	it("returns 404 when not found", async () => {
 		const res = await req("/api/schedule-groups/nonexistent");
@@ -474,9 +566,10 @@ describe("GET /api/schedule-groups/:id", () => {
 	});
 
 	it("returns group when found", async () => {
+		const base = makeStores();
 		const stores = {
-			...makeStores(),
-			scheduleGroups: makeScheduleGroupStore([
+			...base,
+			scheduleGroups: makeScheduleGroupStore(base.schedules, [
 				{ id: "g-1", name: "Mortgage" },
 			]),
 		};

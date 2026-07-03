@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { get } from "../api/client";
-import type { ScheduleGroup } from "../engine/types";
+import { get, post } from "../api/client";
+import type { ScheduleGroup, ScheduleGroupWithMembers } from "../engine/types";
 
 export function useScheduleGroups() {
 	const [scheduleGroups, setScheduleGroups] = useState<ScheduleGroup[]>([]);
@@ -23,5 +23,17 @@ export function useScheduleGroups() {
 		void refresh();
 	}, [refresh]);
 
-	return { scheduleGroups, error };
+	async function addGroup(input: ScheduleGroupWithMembers) {
+		try {
+			await post("/api/schedule-groups", input);
+		} catch (err) {
+			const e = err instanceof Error ? err : new Error(String(err));
+			setError(e);
+			toast.error(`Failed to add payment group: ${e.message}`);
+			return;
+		}
+		await refresh();
+	}
+
+	return { scheduleGroups, error, addGroup, refresh };
 }
