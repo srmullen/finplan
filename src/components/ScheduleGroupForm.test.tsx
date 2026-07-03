@@ -1,7 +1,11 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { Account, ExternalParty } from "../engine/types";
+import type {
+	Account,
+	ExternalParty,
+	ScheduleGroupWithMembers,
+} from "../engine/types";
 import ScheduleGroupForm from "./ScheduleGroupForm";
 
 const { mockGenerateId } = vi.hoisted(() => {
@@ -313,5 +317,136 @@ describe("ScheduleGroupForm — submit", () => {
 		submit();
 		const saved = onSave.mock.calls.at(-1)?.[0];
 		expect(saved.schedules[0].terminateAtZero).toBe(true);
+	});
+});
+
+describe("ScheduleGroupForm — edit mode", () => {
+	const initial: ScheduleGroupWithMembers = {
+		group: { id: "g-1", name: "Mortgage" },
+		schedules: [
+			{
+				id: "s-a",
+				sourceId: "acc-1",
+				destinationId: "loan-1",
+				amount: 1500,
+				estimated: false,
+				frequency: "monthly",
+				startDate: "2024-01-01",
+				terminateAtZero: false,
+				groupId: "g-1",
+			},
+			{
+				id: "s-b",
+				sourceId: "acc-1",
+				destinationId: "party-1",
+				amount: 500,
+				estimated: true,
+				frequency: "biweekly",
+				startDate: "2024-02-01",
+				endDate: "2024-12-31",
+				terminateAtZero: false,
+				groupId: "g-1",
+			},
+		],
+	};
+
+	function submitEdit() {
+		fireEvent.submit(
+			screen.getByRole("button", { name: "Save changes" }).closest("form")!,
+		);
+	}
+
+	it("renders 'Save changes' button and pre-fills group name and shared source", () => {
+		render(
+			<ScheduleGroupForm
+				initial={initial}
+				accounts={accounts}
+				externalParties={parties}
+				onSave={onSave}
+				onCancel={onCancel}
+			/>,
+		);
+		expect(screen.getByRole("button", { name: "Save changes" })).toBeTruthy();
+		expect((screen.getByLabelText("Group name") as HTMLInputElement).value).toBe(
+			"Mortgage",
+		);
+		expect((screen.getByLabelText("From") as HTMLSelectElement).value).toBe(
+			"acc-1",
+		);
+	});
+
+	it("pre-fills member rows from the initial schedules", () => {
+		render(
+			<ScheduleGroupForm
+				initial={initial}
+				accounts={accounts}
+				externalParties={parties}
+				onSave={onSave}
+				onCancel={onCancel}
+			/>,
+		);
+		const amounts = screen.getAllByLabelText("Amount ($)") as HTMLInputElement[];
+		expect(amounts.map((a) => a.value)).toEqual(["1500", "500"]);
+		const ends = screen.getAllByLabelText(
+			"End date (optional)",
+		) as HTMLInputElement[];
+		expect(ends[1].value).toBe("2024-12-31");
+	});
+
+	it("preserves the original group id and existing member schedule ids on save", () => {
+		render(
+			<ScheduleGroupForm
+				initial={initial}
+				accounts={accounts}
+				externalParties={parties}
+				onSave={onSave}
+				onCancel={onCancel}
+			/>,
+		);
+		submitEdit();
+		const saved = onSave.mock.calls.at(-1)?.[0];
+		expect(saved.group.id).toBe("g-1");
+		expect(saved.schedules.map((s: { id: string }) => s.id)).toEqual([
+			"s-a",
+			"s-b",
+		]);
+	});
+
+	it("assigns a new id to a member row added during edit", () => {
+		render(
+			<ScheduleGroupForm
+				initial={initial}
+				accounts={accounts}
+				externalParties={parties}
+				onSave={onSave}
+				onCancel={onCancel}
+			/>,
+		);
+		fireEvent.click(screen.getByRole("button", { name: "+ Add member" }));
+		submitEdit();
+		const saved = onSave.mock.calls.at(-1)?.[0];
+		expect(saved.schedules).toHaveLength(3);
+		expect(saved.schedules[2].id).not.toBe("s-a");
+		expect(saved.schedules[2].id).not.toBe("s-b");
+	});
+
+	it("drops a removed member row on save", () => {
+		render(
+			<ScheduleGroupForm
+				initial={initial}
+				accounts={accounts}
+				externalParties={parties}
+				onSave={onSave}
+				onCancel={onCancel}
+			/>,
+		);
+		fireEvent.click(screen.getByRole("button", { name: "+ Add member" }));
+		const removeBtns = screen.getAllByRole("button", { name: "Remove member" });
+		fireEvent.click(removeBtns[0]);
+		submitEdit();
+		const saved = onSave.mock.calls.at(-1)?.[0];
+		expect(
+			saved.schedules.map((s: { id: string }) => s.id),
+		).not.toContain("s-a");
 	});
 });

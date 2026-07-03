@@ -40,6 +40,8 @@ export interface ScheduleGroupStore {
 	list(): ScheduleGroup[];
 	get(id: string): ScheduleGroup | null;
 	createWithMembers(group: ScheduleGroup, schedules: Schedule[]): void;
+	updateWithMembers(group: ScheduleGroup, schedules: Schedule[]): void;
+	remove(id: string): void;
 }
 
 export interface AdjustmentStore {
@@ -63,6 +65,17 @@ export interface Stores {
 	parties: ExternalPartyStore;
 	scenarios: ScenarioStore;
 	adjustments: AdjustmentStore;
+}
+
+function validateGroupMembers(schedules: Schedule[]): string | null {
+	if (schedules.length < 2) {
+		return "A payment group requires at least two member schedules";
+	}
+	const sourceIds = new Set(schedules.map((s) => s.sourceId));
+	if (sourceIds.size > 1) {
+		return "All member schedules must share the same source account";
+	}
+	return null;
 }
 
 export function createApp(stores: Stores, apiKey: string): Hono {
@@ -175,19 +188,8 @@ export function createApp(stores: Stores, apiKey: string): Hono {
 	app.post("/api/schedule-groups", async (c) => {
 		const body = await c.req.json<ScheduleGroupWithMembers>();
 		const { group, schedules } = body;
-		if (schedules.length < 2) {
-			return c.json(
-				{ error: "A payment group requires at least two member schedules" },
-				400,
-			);
-		}
-		const sourceIds = new Set(schedules.map((s) => s.sourceId));
-		if (sourceIds.size > 1) {
-			return c.json(
-				{ error: "All member schedules must share the same source account" },
-				400,
-			);
-		}
+		const error = validateGroupMembers(schedules);
+		if (error) return c.json({ error }, 400);
 		const members = schedules.map((s) => ({ ...s, groupId: group.id }));
 		stores.scheduleGroups.createWithMembers(group, members);
 		return c.json({ group, schedules: members }, 201);
@@ -197,6 +199,25 @@ export function createApp(stores: Stores, apiKey: string): Hono {
 		const group = stores.scheduleGroups.get(c.req.param("id"));
 		if (!group) return c.json({ error: "Not found" }, 404);
 		return c.json(group);
+	});
+
+	app.put("/api/schedule-groups/:id", async (c) => {
+		const body = await c.req.json<ScheduleGroupWithMembers>();
+		const { group, schedules } = body;
+		if (group.id !== c.req.param("id"))
+			return c.json({ error: "ID mismatch" }, 400);
+		if (!stores.scheduleGroups.get(group.id))
+			return c.json({ error: "Not found" }, 404);
+		const error = validateGroupMembers(schedules);
+		if (error) return c.json({ error }, 400);
+		const members = schedules.map((s) => ({ ...s, groupId: group.id }));
+		stores.scheduleGroups.updateWithMembers(group, members);
+		return c.json({ group, schedules: members });
+	});
+
+	app.delete("/api/schedule-groups/:id", (c) => {
+		stores.scheduleGroups.remove(c.req.param("id"));
+		return c.body(null, 204);
 	});
 
 	// --- Adjustments ---

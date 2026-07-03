@@ -30,6 +30,8 @@ const mockUpdateSchedule = vi.fn();
 const mockDeleteSchedule = vi.fn();
 const mockRefreshSchedules = vi.fn();
 const mockAddGroup = vi.fn();
+const mockUpdateGroup = vi.fn();
+const mockDeleteGroup = vi.fn();
 
 const account: Account = {
 	id: "acc-1",
@@ -73,6 +75,8 @@ function setupMocks(
 	vi.mocked(useScheduleGroups).mockReturnValue({
 		scheduleGroups,
 		addGroup: mockAddGroup,
+		updateGroup: mockUpdateGroup,
+		deleteGroup: mockDeleteGroup,
 		refresh: vi.fn(),
 		error: null,
 	} as ReturnType<typeof useScheduleGroups>);
@@ -329,5 +333,71 @@ describe("SchedulesView — Payment Groups", () => {
 		expect(screen.getByText("Mortgage")).toBeTruthy();
 		expect(screen.getByText("$2,000")).toBeTruthy();
 		expect(screen.getByText("$500")).toBeTruthy();
+	});
+
+	it("opens ScheduleGroupForm pre-populated when the group's Edit is clicked, hides on Cancel", () => {
+		const grouped: Schedule = { ...memberA, groupId: "g-1" };
+		setupMocks([grouped], [account], [party], [group]);
+		render(<SchedulesView />);
+		fireEvent.click(screen.getAllByRole("button", { name: "Edit" })[0]);
+		expect(screen.getByRole("button", { name: "Save changes" })).toBeTruthy();
+		expect((screen.getByLabelText("Group name") as HTMLInputElement).value).toBe(
+			"Mortgage",
+		);
+		fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+		expect(screen.queryByLabelText("Group name")).toBeNull();
+	});
+
+	it("calls updateGroup and refreshes schedules on save, then hides the form", async () => {
+		const grouped: Schedule = { ...memberA, groupId: "g-1" };
+		mockUpdateGroup.mockResolvedValue(undefined);
+		setupMocks([grouped], [account], [party], [group]);
+		render(<SchedulesView />);
+		fireEvent.click(screen.getAllByRole("button", { name: "Edit" })[0]);
+		await act(async () => {
+			fireEvent.submit(
+				screen.getByRole("button", { name: "Save changes" }).closest("form")!,
+			);
+		});
+		expect(mockUpdateGroup).toHaveBeenCalled();
+		expect(mockRefreshSchedules).toHaveBeenCalled();
+		expect(screen.queryByLabelText("Group name")).toBeNull();
+	});
+
+	it("calls deleteGroup and refreshes schedules when the group's Delete is confirmed", async () => {
+		const grouped: Schedule = { ...memberA, groupId: "g-1" };
+		vi.spyOn(window, "confirm").mockReturnValue(true);
+		mockDeleteGroup.mockResolvedValue(undefined);
+		setupMocks([grouped], [account], [party], [group]);
+		render(<SchedulesView />);
+		await act(async () => {
+			fireEvent.click(screen.getAllByRole("button", { name: "Delete" })[0]);
+		});
+		expect(mockDeleteGroup).toHaveBeenCalledWith("g-1");
+		expect(mockRefreshSchedules).toHaveBeenCalled();
+	});
+
+	it("does not call deleteGroup when the group's Delete is cancelled", async () => {
+		const grouped: Schedule = { ...memberA, groupId: "g-1" };
+		vi.spyOn(window, "confirm").mockReturnValue(false);
+		setupMocks([grouped], [account], [party], [group]);
+		render(<SchedulesView />);
+		await act(async () => {
+			fireEvent.click(screen.getAllByRole("button", { name: "Delete" })[0]);
+		});
+		expect(mockDeleteGroup).not.toHaveBeenCalled();
+	});
+
+	it("closes an open group edit form when that same group is deleted", async () => {
+		const grouped: Schedule = { ...memberA, groupId: "g-1" };
+		vi.spyOn(window, "confirm").mockReturnValue(true);
+		mockDeleteGroup.mockResolvedValue(undefined);
+		setupMocks([grouped], [account], [party], [group]);
+		render(<SchedulesView />);
+		fireEvent.click(screen.getAllByRole("button", { name: "Edit" })[0]);
+		await act(async () => {
+			fireEvent.click(screen.getAllByRole("button", { name: "Delete" })[0]);
+		});
+		expect(screen.queryByLabelText("Group name")).toBeNull();
 	});
 });

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { get, post } from "../api/client";
+import { del, get, post, put } from "../api/client";
 import type { ScheduleGroup, ScheduleGroupWithMembers } from "../engine/types";
 
 export function useScheduleGroups() {
@@ -35,5 +35,29 @@ export function useScheduleGroups() {
 		await refresh();
 	}
 
-	return { scheduleGroups, error, addGroup, refresh };
+	async function updateGroup(input: ScheduleGroupWithMembers) {
+		try {
+			await put(`/api/schedule-groups/${input.group.id}`, input);
+		} catch (err) {
+			const e = err instanceof Error ? err : new Error(String(err));
+			setError(e);
+			toast.error(`Failed to update payment group: ${e.message}`);
+			return;
+		}
+		await refresh();
+	}
+
+	async function deleteGroup(id: string) {
+		try {
+			await del(`/api/schedule-groups/${id}`);
+		} catch (err) {
+			const e = err instanceof Error ? err : new Error(String(err));
+			setError(e);
+			toast.error(`Failed to delete payment group: ${e.message}`);
+			return;
+		}
+		await refresh();
+	}
+
+	return { scheduleGroups, error, addGroup, updateGroup, deleteGroup, refresh };
 }
