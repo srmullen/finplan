@@ -7,14 +7,21 @@ import {
 	screen,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Account, ExternalParty, Schedule } from "../engine/types";
+import type {
+	Account,
+	ExternalParty,
+	Schedule,
+	ScheduleGroup,
+} from "../engine/types";
 
 vi.mock("@src/hooks/useSchedules");
+vi.mock("@src/hooks/useScheduleGroups");
 vi.mock("@src/hooks/useAccounts");
 vi.mock("@src/hooks/useExternalParties");
 
 import { useAccounts } from "@src/hooks/useAccounts";
 import { useExternalParties } from "@src/hooks/useExternalParties";
+import { useScheduleGroups } from "@src/hooks/useScheduleGroups";
 import { useSchedules } from "@src/hooks/useSchedules";
 import SchedulesView from "./SchedulesView";
 
@@ -51,6 +58,7 @@ function setupMocks(
 	schedules: Schedule[] = [],
 	accounts: Account[] = [],
 	parties: ExternalParty[] = [],
+	scheduleGroups: ScheduleGroup[] = [],
 ) {
 	vi.mocked(useSchedules).mockReturnValue({
 		schedules,
@@ -59,6 +67,10 @@ function setupMocks(
 		deleteSchedule: mockDeleteSchedule,
 		error: null,
 	} as ReturnType<typeof useSchedules>);
+	vi.mocked(useScheduleGroups).mockReturnValue({
+		scheduleGroups,
+		error: null,
+	} as ReturnType<typeof useScheduleGroups>);
 	vi.mocked(useAccounts).mockReturnValue({
 		accounts,
 		addAccount: vi.fn(),
@@ -219,5 +231,45 @@ describe("SchedulesView — with schedules", () => {
 			fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 		});
 		expect(mockDeleteSchedule).not.toHaveBeenCalled();
+	});
+});
+
+describe("SchedulesView — Payment Groups", () => {
+	const group: ScheduleGroup = { id: "g-1", name: "Mortgage" };
+	const memberA: Schedule = {
+		...schedule,
+		id: "s-member-a",
+		amount: 2000,
+		estimated: false,
+	};
+	const memberB: Schedule = {
+		...schedule,
+		id: "s-member-b",
+		amount: 500,
+		estimated: false,
+		groupId: "g-1",
+	};
+
+	it("renders a group header row above its member schedules", () => {
+		const grouped: Schedule = { ...memberA, groupId: "g-1" };
+		setupMocks([grouped], [account], [party], [group]);
+		render(<SchedulesView />);
+		expect(screen.getByText("Mortgage")).toBeTruthy();
+	});
+
+	it("renders ungrouped schedules exactly as before, without a group header", () => {
+		setupMocks([memberA], [account], [party], [group]);
+		render(<SchedulesView />);
+		expect(screen.queryByText("Mortgage")).toBeNull();
+		expect(screen.getByText("$2,000")).toBeTruthy();
+	});
+
+	it("renders both grouped and ungrouped schedules together", () => {
+		const grouped: Schedule = { ...memberB, groupId: "g-1" };
+		setupMocks([memberA, grouped], [account], [party], [group]);
+		render(<SchedulesView />);
+		expect(screen.getByText("Mortgage")).toBeTruthy();
+		expect(screen.getByText("$2,000")).toBeTruthy();
+		expect(screen.getByText("$500")).toBeTruthy();
 	});
 });

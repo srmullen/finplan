@@ -46,6 +46,12 @@ export interface Schedule {
 	startDate: string; // ISO date YYYY-MM-DD
 	endDate?: string; // ISO date YYYY-MM-DD
 	terminateAtZero: boolean; // only meaningful when destination is an amortizing Account
+	groupId?: string; // ScheduleGroup.id, when this Schedule is a member of a Payment Group
+}
+
+export interface ScheduleGroup {
+	id: string;
+	name: string;
 }
 
 export interface Adjustment {

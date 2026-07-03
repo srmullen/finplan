@@ -5,12 +5,14 @@ import type {
 	ExternalParty,
 	Scenario,
 	Schedule,
+	ScheduleGroup,
 } from "../src/engine/types";
 import type {
 	AccountStore,
 	AdjustmentStore,
 	ExternalPartyStore,
 	ScenarioStore,
+	ScheduleGroupStore,
 	ScheduleStore,
 	Stores,
 } from "./index";
@@ -44,7 +46,12 @@ function rowToSchedule(row: Record<string, unknown>): Schedule {
 		startDate: row.start_date as string,
 		...(row.end_date ? { endDate: row.end_date as string } : {}),
 		terminateAtZero: Boolean(row.terminate_at_zero),
+		...(row.group_id ? { groupId: row.group_id as string } : {}),
 	};
+}
+
+function rowToScheduleGroup(row: Record<string, unknown>): ScheduleGroup {
+	return { id: row.id as string, name: row.name as string };
 }
 
 function rowToAdjustment(row: Record<string, unknown>): Adjustment {
@@ -116,6 +123,12 @@ export function createSQLiteStores(db: Database.Database): Stores {
     )
   `);
 	db.exec(`
+    CREATE TABLE IF NOT EXISTS schedule_groups (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL
+    )
+  `);
+	db.exec(`
     CREATE TABLE IF NOT EXISTS schedules (
       id TEXT PRIMARY KEY,
       source_id TEXT NOT NULL,
@@ -125,9 +138,15 @@ export function createSQLiteStores(db: Database.Database): Stores {
       frequency TEXT NOT NULL,
       start_date TEXT NOT NULL,
       end_date TEXT,
-      terminate_at_zero INTEGER NOT NULL DEFAULT 0
+      terminate_at_zero INTEGER NOT NULL DEFAULT 0,
+      group_id TEXT
     )
   `);
+	try {
+		db.exec("ALTER TABLE schedules ADD COLUMN group_id TEXT");
+	} catch {
+		// column already exists
+	}
 	db.exec(`
     CREATE TABLE IF NOT EXISTS adjustments (
       id TEXT PRIMARY KEY,
@@ -236,7 +255,7 @@ export function createSQLiteStores(db: Database.Database): Stores {
 		},
 		create: (schedule) => {
 			db.prepare(
-				"INSERT INTO schedules (id, source_id, destination_id, amount, estimated, frequency, start_date, end_date, terminate_at_zero) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+				"INSERT INTO schedules (id, source_id, destination_id, amount, estimated, frequency, start_date, end_date, terminate_at_zero, group_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 			).run(
 				schedule.id,
 				schedule.sourceId,
@@ -247,11 +266,12 @@ export function createSQLiteStores(db: Database.Database): Stores {
 				schedule.startDate,
 				schedule.endDate ?? null,
 				schedule.terminateAtZero ? 1 : 0,
+				schedule.groupId ?? null,
 			);
 		},
 		update: (schedule) => {
 			db.prepare(
-				"UPDATE schedules SET source_id = ?, destination_id = ?, amount = ?, estimated = ?, frequency = ?, start_date = ?, end_date = ?, terminate_at_zero = ? WHERE id = ?",
+				"UPDATE schedules SET source_id = ?, destination_id = ?, amount = ?, estimated = ?, frequency = ?, start_date = ?, end_date = ?, terminate_at_zero = ?, group_id = ? WHERE id = ?",
 			).run(
 				schedule.sourceId,
 				schedule.destinationId,
@@ -261,11 +281,28 @@ export function createSQLiteStores(db: Database.Database): Stores {
 				schedule.startDate,
 				schedule.endDate ?? null,
 				schedule.terminateAtZero ? 1 : 0,
+				schedule.groupId ?? null,
 				schedule.id,
 			);
 		},
 		remove: (id) => {
 			db.prepare("DELETE FROM schedules WHERE id = ?").run(id);
+		},
+	};
+
+	const scheduleGroups: ScheduleGroupStore = {
+		list: () =>
+			(
+				db.prepare("SELECT * FROM schedule_groups").all() as Record<
+					string,
+					unknown
+				>[]
+			).map(rowToScheduleGroup),
+		get: (id) => {
+			const row = db
+				.prepare("SELECT * FROM schedule_groups WHERE id = ?")
+				.get(id) as Record<string, unknown> | null;
+			return row ? rowToScheduleGroup(row) : null;
 		},
 	};
 
@@ -330,5 +367,12 @@ export function createSQLiteStores(db: Database.Database): Stores {
 		},
 	};
 
-	return { accounts, parties, schedules, adjustments, scenarios };
+	return {
+		accounts,
+		parties,
+		schedules,
+		scheduleGroups,
+		adjustments,
+		scenarios,
+	};
 }
