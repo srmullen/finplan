@@ -11,3 +11,7 @@ Default label vocabulary: needs-triage, needs-info, ready-for-agent, ready-for-h
 ### Domain docs
 
 Single-context repo: one `CONTEXT.md` + `docs/adr/` at the root. See `docs/agents/domain.md`.
+
+### Feature docs
+
+New features that change what a user can see or do must add/update a section on the in-app `/docs` page. See `docs/agents/feature-docs.md`.
