@@ -1,79 +1,174 @@
+import type { ReactNode } from "react";
+
+function DocsBlock({
+	label,
+	children,
+}: {
+	label: string;
+	children: ReactNode;
+}) {
+	return (
+		<div style={styles.block}>
+			<div style={styles.blockLabel}>{label}</div>
+			<p style={styles.paragraph}>{children}</p>
+		</div>
+	);
+}
+
 export default function DocsView() {
 	return (
-		<div>
+		<div style={styles.page}>
 			<h1>Docs</h1>
+			<p style={styles.intro}>
+				A plain-language guide to what each part of finplan does and how to use
+				it.
+			</p>
 
 			<nav aria-label="Table of contents" style={styles.toc}>
+				<span style={styles.tocLabel}>On this page</span>
 				<ul style={styles.tocList}>
 					<li>
-						<a href="#projection">Projection</a>
+						<a href="#projection" style={styles.tocLink}>
+							Projection
+						</a>
 					</li>
 					<li>
-						<a href="#accounts">Accounts</a>
+						<a href="#accounts" style={styles.tocLink}>
+							Accounts
+						</a>
 					</li>
 					<li>
-						<a href="#schedules">Schedules</a>
+						<a href="#schedules" style={styles.tocLink}>
+							Schedules
+						</a>
 					</li>
 				</ul>
 			</nav>
 
-			<h2 id="projection">Projection</h2>
-			<p>
-				<strong>What it's for:</strong> The Projection view shows how your
-				account balances are expected to change over time. It replays your
-				schedules and rates forward from today, so you can see a chart of every
-				account's balance heading into the future.
-			</p>
-			<p>
-				<strong>How to use it:</strong> Pick a horizon from the dropdown, hide
-				accounts with the checkboxes, and open "Scenarios" to overlay a what-if
-				as a dashed line without touching your real plan. Milestones like an
-				account being paid off appear right on the chart.
-			</p>
+			<section style={styles.section}>
+				<h2 id="projection" style={styles.sectionTitle}>
+					Projection
+				</h2>
+				<DocsBlock label="What it's for">
+					The Projection view shows how your account balances are expected to
+					change over time. It replays your schedules and rates forward from
+					today, so you can see a chart of every account's balance heading into
+					the future.
+				</DocsBlock>
+				<DocsBlock label="How to use it">
+					Pick a horizon from the dropdown, hide accounts with the checkboxes,
+					and open "Scenarios" to overlay a what-if as a dashed line without
+					touching your real plan. Milestones like an account being paid off
+					appear right on the chart.
+				</DocsBlock>
+			</section>
 
-			<h2 id="accounts">Accounts</h2>
-			<p>
-				<strong>What it's for:</strong> The Accounts view is where you keep the
-				list of accounts and external parties (like employers or lenders) that
-				make up your financial picture. Every account tracks a balance, an
-				owner, and whether it's a growing/interest-bearing balance or a loan
-				paying down to zero.
-			</p>
-			<p>
-				<strong>How to use it:</strong> Use "+ Add account" or "+ Add external
-				party" to add one. Click an account's name to record an Adjustment — a
-				real-world balance for a specific date — so future projections start
-				from reality instead of drifting from what was planned.
-			</p>
+			<hr style={styles.divider} />
 
-			<h2 id="schedules">Schedules</h2>
-			<p>
-				<strong>What it's for:</strong> The Schedules view lists the recurring
-				and one-time money movements between your accounts and external parties
-				— paychecks, rent, loan payments, transfers, and so on. These are what
-				the Projection view replays forward to build its chart.
-			</p>
-			<p>
-				<strong>How to use it:</strong> Use "+ Add schedule" to create a
-				transfer with an amount, frequency, source, destination, and start (and
-				optionally end) date. When a single real-world payment actually splits
-				across multiple destinations — for example a mortgage payment that also
-				funds an escrow account — use "+ Add payment group" to bundle those
-				schedules under one named group so they display and can be edited or
-				deleted together.
-			</p>
+			<section style={styles.section}>
+				<h2 id="accounts" style={styles.sectionTitle}>
+					Accounts
+				</h2>
+				<DocsBlock label="What it's for">
+					The Accounts view is where you keep the list of accounts and external
+					parties (like employers or lenders) that make up your financial
+					picture. Every account tracks a balance, an owner, and whether it's a
+					growing/interest-bearing balance or a loan paying down to zero.
+				</DocsBlock>
+				<DocsBlock label="How to use it">
+					Use "+ Add account" or "+ Add external party" to add one. Click an
+					account's name to record an Adjustment — a real-world balance for a
+					specific date — so future projections start from reality instead of
+					drifting from what was planned.
+				</DocsBlock>
+			</section>
+
+			<hr style={styles.divider} />
+
+			<section style={styles.section}>
+				<h2 id="schedules" style={styles.sectionTitle}>
+					Schedules
+				</h2>
+				<DocsBlock label="What it's for">
+					The Schedules view lists the recurring and one-time money movements
+					between your accounts and external parties — paychecks, rent, loan
+					payments, transfers, and so on. These are what the Projection view
+					replays forward to build its chart.
+				</DocsBlock>
+				<DocsBlock label="How to use it">
+					Use "+ Add schedule" to create a transfer with an amount, frequency,
+					source, destination, and start (and optionally end) date. When a
+					single real-world payment actually splits across multiple destinations
+					— for example a mortgage payment that also funds an escrow account —
+					use "+ Add payment group" to bundle those schedules under one named
+					group so they display and can be edited or deleted together.
+				</DocsBlock>
+			</section>
 		</div>
 	);
 }
 
 const styles = {
+	page: {
+		maxWidth: "42rem",
+	},
+	intro: {
+		color: "#6b7280",
+		marginBottom: "1.5rem",
+	},
 	toc: {
+		display: "flex",
+		flexDirection: "column" as const,
+		gap: "0.5rem",
 		marginBottom: "2rem",
+		padding: "1rem 1.25rem",
+		background: "#fff",
+		border: "1px solid #e5e7eb",
+		borderBottom: "1px solid #e5e7eb",
+		borderRadius: "6px",
+	},
+	tocLabel: {
+		fontSize: "0.75rem",
+		fontWeight: 600,
+		color: "#6b7280",
+		textTransform: "uppercase" as const,
+		letterSpacing: "0.05em",
 	},
 	tocList: {
 		display: "flex",
-		gap: "1rem",
+		flexWrap: "wrap" as const,
+		gap: "0.5rem 1.25rem",
 		listStyle: "none",
 		padding: 0,
+	},
+	tocLink: {
+		padding: 0,
+		background: "none",
+		color: "#1d4ed8",
+		fontWeight: 500,
+	},
+	section: {
+		marginBottom: "1.5rem",
+	},
+	sectionTitle: {
+		marginBottom: "0.75rem",
+	},
+	block: {
+		marginBottom: "1rem",
+	},
+	blockLabel: {
+		fontSize: "0.75rem",
+		fontWeight: 600,
+		color: "#6b7280",
+		textTransform: "uppercase" as const,
+		letterSpacing: "0.05em",
+		marginBottom: "0.25rem",
+	},
+	paragraph: {
+		lineHeight: 1.6,
+	},
+	divider: {
+		margin: "1.5rem 0",
+		borderColor: "#e5e7eb",
 	},
 };
