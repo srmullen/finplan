@@ -16,12 +16,15 @@ export default function SchedulesView() {
 		deleteSchedule,
 		refresh: refreshSchedules,
 	} = useSchedules();
-	const { scheduleGroups, addGroup } = useScheduleGroups();
+	const { scheduleGroups, addGroup, updateGroup, deleteGroup } =
+		useScheduleGroups();
 	const { accounts } = useAccounts();
 	const { externalParties } = useExternalParties();
 	const [showForm, setShowForm] = useState(false);
 	const [showGroupForm, setShowGroupForm] = useState(false);
 	const [editing, setEditing] = useState<Schedule | null>(null);
+	const [editingGroup, setEditingGroup] =
+		useState<ScheduleGroupWithMembers | null>(null);
 
 	const nodeLabel = (id: string) => {
 		const account = accounts.find((a) => a.id === id);
@@ -42,15 +45,29 @@ export default function SchedulesView() {
 	}
 
 	async function saveGroup(input: ScheduleGroupWithMembers) {
-		await addGroup(input);
+		if (editingGroup) {
+			await updateGroup(input);
+			setEditingGroup(null);
+		} else {
+			await addGroup(input);
+			setShowGroupForm(false);
+		}
 		await refreshSchedules();
-		setShowGroupForm(false);
 	}
 
 	function handleDeleteSchedule(id: string) {
 		if (confirm("Delete this schedule?")) {
 			void deleteSchedule(id);
 		}
+	}
+
+	async function handleDeleteGroup(id: string) {
+		if (!confirm("Delete this payment group and all its member schedules?")) {
+			return;
+		}
+		await deleteGroup(id);
+		await refreshSchedules();
+		if (editingGroup?.group.id === id) setEditingGroup(null);
 	}
 
 	const noNodes = accounts.length + externalParties.length < 2;
@@ -85,6 +102,8 @@ export default function SchedulesView() {
 					style={styles.editBtn}
 					onClick={() => {
 						setShowForm(false);
+						setShowGroupForm(false);
+						setEditingGroup(null);
 						setEditing(s);
 					}}
 				>
@@ -118,16 +137,20 @@ export default function SchedulesView() {
 				/>
 			)}
 
-			{showGroupForm && (
+			{(showGroupForm || editingGroup) && (
 				<ScheduleGroupForm
+					initial={editingGroup ?? undefined}
 					accounts={accounts}
 					externalParties={externalParties}
 					onSave={saveGroup}
-					onCancel={() => setShowGroupForm(false)}
+					onCancel={() => {
+						setShowGroupForm(false);
+						setEditingGroup(null);
+					}}
 				/>
 			)}
 
-			{!showForm && !editing && !showGroupForm && (
+			{!showForm && !editing && !showGroupForm && !editingGroup && (
 				<div style={styles.addBtnRow}>
 					<button
 						type="button"
@@ -184,8 +207,29 @@ export default function SchedulesView() {
 						{groups.map(({ group, members }) => (
 							<Fragment key={group.id}>
 								<tr>
-									<td colSpan={7} style={styles.groupHeaderCell}>
+									<td colSpan={6} style={styles.groupHeaderCell}>
 										{group.name}
+									</td>
+									<td style={{ ...styles.actions, ...styles.groupHeaderCell }}>
+										<button
+											type="button"
+											style={styles.editBtn}
+											onClick={() => {
+												setShowForm(false);
+												setEditing(null);
+												setShowGroupForm(false);
+												setEditingGroup({ group, schedules: members });
+											}}
+										>
+											Edit
+										</button>
+										<button
+											type="button"
+											style={styles.deleteBtn}
+											onClick={() => void handleDeleteGroup(group.id)}
+										>
+											Delete
+										</button>
 									</td>
 								</tr>
 								{members.map((s) => renderScheduleRow(s, true))}

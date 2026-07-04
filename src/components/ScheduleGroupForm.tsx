@@ -9,6 +9,7 @@ import type {
 import { generateId } from "../utils/id";
 
 interface Props {
+	initial?: ScheduleGroupWithMembers;
 	accounts: Account[];
 	externalParties: ExternalParty[];
 	onSave: (input: ScheduleGroupWithMembers) => void;
@@ -26,6 +27,7 @@ const FREQUENCIES: Frequency[] = [
 ];
 
 interface MemberRow {
+	id?: string;
 	destinationId: string;
 	amount: string;
 	estimated: boolean;
@@ -47,7 +49,21 @@ function makeRow(destinationId: string, startDate: string): MemberRow {
 	};
 }
 
+function rowFromSchedule(schedule: Schedule): MemberRow {
+	return {
+		id: schedule.id,
+		destinationId: schedule.destinationId,
+		amount: String(schedule.amount),
+		estimated: schedule.estimated,
+		frequency: schedule.frequency,
+		startDate: schedule.startDate,
+		endDate: schedule.endDate ?? "",
+		terminateAtZero: schedule.terminateAtZero,
+	};
+}
+
 export default function ScheduleGroupForm({
+	initial,
 	accounts,
 	externalParties,
 	onSave,
@@ -70,12 +86,15 @@ export default function ScheduleGroupForm({
 
 	const firstNodeId = allNodes[0]?.id ?? "";
 
-	const [name, setName] = useState("");
-	const [sourceId, setSourceId] = useState(firstNodeId);
-	const [rows, setRows] = useState<MemberRow[]>([
-		makeRow(firstNodeId, today),
-		makeRow(firstNodeId, today),
-	]);
+	const [name, setName] = useState(initial?.group.name ?? "");
+	const [sourceId, setSourceId] = useState(
+		initial?.schedules[0]?.sourceId ?? firstNodeId,
+	);
+	const [rows, setRows] = useState<MemberRow[]>(
+		initial
+			? initial.schedules.map(rowFromSchedule)
+			: [makeRow(firstNodeId, today), makeRow(firstNodeId, today)],
+	);
 
 	function updateRow(index: number, patch: Partial<MemberRow>) {
 		setRows((prev) =>
@@ -93,12 +112,12 @@ export default function ScheduleGroupForm({
 
 	function handleSubmit(e: FormEvent) {
 		e.preventDefault();
-		const groupId = generateId();
+		const groupId = initial?.group.id ?? generateId();
 		const schedules: Schedule[] = rows.map((row) => {
 			const destNode = allNodes.find((n) => n.id === row.destinationId);
 			const destIsAmortizing = destNode?.isAmortizing ?? false;
 			const schedule: Schedule = {
-				id: generateId(),
+				id: row.id ?? generateId(),
 				sourceId,
 				destinationId: row.destinationId,
 				amount: parseFloat(row.amount) || 0,
@@ -277,7 +296,7 @@ export default function ScheduleGroupForm({
 					Cancel
 				</button>
 				<button type="submit" style={styles.saveBtn}>
-					Add payment group
+					{initial ? "Save changes" : "Add payment group"}
 				</button>
 			</div>
 		</form>

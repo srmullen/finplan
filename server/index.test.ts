@@ -97,6 +97,21 @@ function makeScheduleGroupStore(
 			items.push(group);
 			for (const schedule of memberSchedules) scheduleStore.create(schedule);
 		},
+		updateWithMembers: (group, memberSchedules) => {
+			const i = items.findIndex((g) => g.id === group.id);
+			if (i >= 0) items[i] = group;
+			for (const existing of scheduleStore.list()) {
+				if (existing.groupId === group.id) scheduleStore.remove(existing.id);
+			}
+			for (const schedule of memberSchedules) scheduleStore.create(schedule);
+		},
+		remove: (id) => {
+			const i = items.findIndex((g) => g.id === id);
+			if (i >= 0) items.splice(i, 1);
+			for (const existing of scheduleStore.list()) {
+				if (existing.groupId === id) scheduleStore.remove(existing.id);
+			}
+		},
 	};
 }
 
@@ -581,6 +596,189 @@ describe("GET /api/schedule-groups/:id", () => {
 		);
 		expect(res.status).toBe(200);
 		expect(await res.json()).toEqual({ id: "g-1", name: "Mortgage" });
+	});
+});
+
+describe("PUT /api/schedule-groups/:id", () => {
+	const memberA: Schedule = {
+		id: "s-a",
+		sourceId: "acc-1",
+		destinationId: "loan-1",
+		amount: 1500,
+		estimated: false,
+		frequency: "monthly",
+		startDate: "2024-01-01",
+		terminateAtZero: false,
+		groupId: "g-1",
+	};
+	const memberB: Schedule = {
+		id: "s-b",
+		sourceId: "acc-1",
+		destinationId: "party-1",
+		amount: 500,
+		estimated: false,
+		frequency: "monthly",
+		startDate: "2024-01-01",
+		terminateAtZero: false,
+		groupId: "g-1",
+	};
+
+	function makeGroupStores() {
+		const base = makeStores();
+		base.scheduleGroups.createWithMembers({ id: "g-1", name: "Mortgage" }, [
+			memberA,
+			memberB,
+		]);
+		return base;
+	}
+
+	it("returns 400 when body.group.id does not match URL :id", async () => {
+		const stores = makeGroupStores();
+		const app2 = createApp(stores, "test-key");
+		const res = await app2.fetch(
+			new Request("http://localhost/api/schedule-groups/g-1", {
+				method: "PUT",
+				headers: { Authorization: AUTH, "Content-Type": "application/json" },
+				body: JSON.stringify({
+					group: { id: "wrong", name: "Mortgage" },
+					schedules: [memberA, memberB],
+				}),
+			}),
+		);
+		expect(res.status).toBe(400);
+	});
+
+	it("returns 404 and creates nothing when the group does not exist", async () => {
+		const stores = makeStores();
+		const app2 = createApp(stores, "test-key");
+		const res = await app2.fetch(
+			new Request("http://localhost/api/schedule-groups/nonexistent", {
+				method: "PUT",
+				headers: { Authorization: AUTH, "Content-Type": "application/json" },
+				body: JSON.stringify({
+					group: { id: "nonexistent", name: "Mortgage" },
+					schedules: [memberA, memberB],
+				}),
+			}),
+		);
+		expect(res.status).toBe(404);
+		expect(stores.schedules.list()).toEqual([]);
+	});
+
+	it("renames the group and reconciles members (add, remove, modify), returns 200", async () => {
+		const stores = makeGroupStores();
+		const app2 = createApp(stores, "test-key");
+		const memberC: Schedule = {
+			id: "s-c",
+			sourceId: "acc-1",
+			destinationId: "party-2",
+			amount: 250,
+			estimated: false,
+			frequency: "monthly",
+			startDate: "2024-01-01",
+			terminateAtZero: false,
+		};
+		const res = await app2.fetch(
+			new Request("http://localhost/api/schedule-groups/g-1", {
+				method: "PUT",
+				headers: { Authorization: AUTH, "Content-Type": "application/json" },
+				body: JSON.stringify({
+					group: { id: "g-1", name: "Mortgage (renamed)" },
+					schedules: [{ ...memberA, amount: 1600 }, memberC],
+				}),
+			}),
+		);
+		expect(res.status).toBe(200);
+		expect(stores.scheduleGroups.get("g-1")).toEqual({
+			id: "g-1",
+			name: "Mortgage (renamed)",
+		});
+		const memberIds = stores.schedules
+			.list()
+			.filter((s) => s.groupId === "g-1")
+			.map((s) => s.id)
+			.sort();
+		expect(memberIds).toEqual(["s-a", "s-c"]);
+		expect(stores.schedules.get("s-a")?.amount).toBe(1600);
+	});
+
+	it("returns 400 and leaves the group unchanged when fewer than two members are provided", async () => {
+		const stores = makeGroupStores();
+		const app2 = createApp(stores, "test-key");
+		const res = await app2.fetch(
+			new Request("http://localhost/api/schedule-groups/g-1", {
+				method: "PUT",
+				headers: { Authorization: AUTH, "Content-Type": "application/json" },
+				body: JSON.stringify({
+					group: { id: "g-1", name: "Mortgage" },
+					schedules: [memberA],
+				}),
+			}),
+		);
+		expect(res.status).toBe(400);
+		expect(
+			stores.schedules.list().filter((s) => s.groupId === "g-1"),
+		).toHaveLength(2);
+	});
+
+	it("returns 400 and leaves the group unchanged when sources mismatch", async () => {
+		const stores = makeGroupStores();
+		const app2 = createApp(stores, "test-key");
+		const res = await app2.fetch(
+			new Request("http://localhost/api/schedule-groups/g-1", {
+				method: "PUT",
+				headers: { Authorization: AUTH, "Content-Type": "application/json" },
+				body: JSON.stringify({
+					group: { id: "g-1", name: "Mortgage" },
+					schedules: [memberA, { ...memberB, sourceId: "other-acc" }],
+				}),
+			}),
+		);
+		expect(res.status).toBe(400);
+		expect(stores.scheduleGroups.get("g-1")).toEqual({
+			id: "g-1",
+			name: "Mortgage",
+		});
+	});
+});
+
+describe("DELETE /api/schedule-groups/:id", () => {
+	it("cascade-deletes the group and its member schedules, returns 204", async () => {
+		const stores = makeStores();
+		stores.scheduleGroups.createWithMembers({ id: "g-1", name: "Mortgage" }, [
+			{
+				id: "s-a",
+				sourceId: "acc-1",
+				destinationId: "loan-1",
+				amount: 1500,
+				estimated: false,
+				frequency: "monthly",
+				startDate: "2024-01-01",
+				terminateAtZero: false,
+				groupId: "g-1",
+			},
+			{
+				id: "s-b",
+				sourceId: "acc-1",
+				destinationId: "party-1",
+				amount: 500,
+				estimated: false,
+				frequency: "monthly",
+				startDate: "2024-01-01",
+				terminateAtZero: false,
+				groupId: "g-1",
+			},
+		]);
+		const app2 = createApp(stores, "test-key");
+		const res = await app2.fetch(
+			new Request("http://localhost/api/schedule-groups/g-1", {
+				method: "DELETE",
+				headers: { Authorization: AUTH },
+			}),
+		);
+		expect(res.status).toBe(204);
+		expect(stores.scheduleGroups.get("g-1")).toBeNull();
+		expect(stores.schedules.list()).toEqual([]);
 	});
 });
 

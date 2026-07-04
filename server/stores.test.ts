@@ -285,6 +285,87 @@ describe("schedule groups store", () => {
 			true,
 		);
 	});
+
+	it("updateWithMembers renames the group and replaces its members", () => {
+		stores.scheduleGroups.createWithMembers({ id: "g1", name: "Mortgage" }, [
+			{
+				id: "s1",
+				sourceId: "acc-1",
+				destinationId: "loan-1",
+				amount: 1500,
+				estimated: false,
+				frequency: "monthly",
+				startDate: "2024-01-01",
+				terminateAtZero: false,
+				groupId: "g1",
+			},
+			{
+				id: "s2",
+				sourceId: "acc-1",
+				destinationId: "party-1",
+				amount: 500,
+				estimated: false,
+				frequency: "monthly",
+				startDate: "2024-01-01",
+				terminateAtZero: false,
+				groupId: "g1",
+			},
+		]);
+
+		stores.scheduleGroups.updateWithMembers({ id: "g1", name: "Renamed" }, [
+			{
+				id: "s3",
+				sourceId: "acc-1",
+				destinationId: "party-2",
+				amount: 250,
+				estimated: false,
+				frequency: "monthly",
+				startDate: "2024-01-01",
+				terminateAtZero: false,
+				groupId: "g1",
+			},
+		]);
+
+		expect(stores.scheduleGroups.get("g1")).toEqual({
+			id: "g1",
+			name: "Renamed",
+		});
+		expect(stores.schedules.list()).toEqual([
+			expect.objectContaining({ id: "s3", groupId: "g1" }),
+		]);
+	});
+
+	it("remove cascade-deletes the group and its member schedules", () => {
+		stores.scheduleGroups.createWithMembers({ id: "g1", name: "Mortgage" }, [
+			{
+				id: "s1",
+				sourceId: "acc-1",
+				destinationId: "loan-1",
+				amount: 1500,
+				estimated: false,
+				frequency: "monthly",
+				startDate: "2024-01-01",
+				terminateAtZero: false,
+				groupId: "g1",
+			},
+			{
+				id: "s2",
+				sourceId: "acc-1",
+				destinationId: "party-1",
+				amount: 500,
+				estimated: false,
+				frequency: "monthly",
+				startDate: "2024-01-01",
+				terminateAtZero: false,
+				groupId: "g1",
+			},
+		]);
+
+		stores.scheduleGroups.remove("g1");
+
+		expect(stores.scheduleGroups.get("g1")).toBeNull();
+		expect(stores.schedules.list()).toEqual([]);
+	});
 });
 
 describe("adjustments store", () => {

@@ -315,6 +315,22 @@ export function createSQLiteStores(db: Database.Database): Stores {
 				}
 			},
 		),
+		updateWithMembers: db.transaction(
+			(group: ScheduleGroup, memberSchedules: Schedule[]) => {
+				db.prepare("UPDATE schedule_groups SET name = ? WHERE id = ?").run(
+					group.name,
+					group.id,
+				);
+				db.prepare("DELETE FROM schedules WHERE group_id = ?").run(group.id);
+				for (const schedule of memberSchedules) {
+					schedules.create(schedule);
+				}
+			},
+		),
+		remove: db.transaction((id: string) => {
+			db.prepare("DELETE FROM schedules WHERE group_id = ?").run(id);
+			db.prepare("DELETE FROM schedule_groups WHERE id = ?").run(id);
+		}),
 	};
 
 	const adjustments: AdjustmentStore = {
