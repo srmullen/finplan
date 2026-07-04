@@ -25,14 +25,10 @@ export default function DocsView() {
 				account's balance heading into the future.
 			</p>
 			<p>
-				<strong>How to use it:</strong> Pick a horizon (3 to 60 months) from the
-				dropdown to control how far ahead the chart looks. Use the checkboxes
-				below the chart to show or hide individual accounts. Open the
-				"Scenarios" panel to turn on one or more scenarios — each adds a dashed
-				line alongside the normal projection so you can compare a what-if
-				against your real plan without changing anything. Milestones like an
-				account being paid off or going negative are marked directly on the
-				chart.
+				<strong>How to use it:</strong> Pick a horizon from the dropdown, hide
+				accounts with the checkboxes, and open "Scenarios" to overlay a what-if
+				as a dashed line without touching your real plan. Milestones like an
+				account being paid off appear right on the chart.
 			</p>
 
 			<h2 id="accounts">Accounts</h2>
@@ -44,14 +40,10 @@ export default function DocsView() {
 				paying down to zero.
 			</p>
 			<p>
-				<strong>How to use it:</strong> Use "+ Add account" to create a new
-				account, and "+ Add external party" to add an outside person or
-				institution you send money to or receive money from without tracking
-				their balance. Click an account's name to open its detail page, where
-				you can record an Adjustment — a manually entered real-world balance for
-				a specific date. Adjustments correct the running projection to match
-				what actually happened, so future projections start from reality instead
-				of drifting from what was originally planned.
+				<strong>How to use it:</strong> Use "+ Add account" or "+ Add external
+				party" to add one. Click an account's name to record an Adjustment — a
+				real-world balance for a specific date — so future projections start
+				from reality instead of drifting from what was planned.
 			</p>
 
 			<h2 id="schedules">Schedules</h2>
