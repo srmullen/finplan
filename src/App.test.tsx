@@ -11,6 +11,9 @@ vi.mock("@src/views/AccountsView", () => ({
 vi.mock("@src/views/SchedulesView", () => ({
 	default: () => <div>SchedulesView</div>,
 }));
+vi.mock("@src/views/DocsView", () => ({
+	default: () => <div>DocsView</div>,
+}));
 vi.mock("sonner", () => ({ Toaster: () => null }));
 
 import App from "./App";
@@ -21,5 +24,6 @@ describe("App", () => {
 		expect(screen.getByText("Projection")).toBeTruthy();
 		expect(screen.getByText("Accounts")).toBeTruthy();
 		expect(screen.getByText("Schedules")).toBeTruthy();
+		expect(screen.getByText("Docs")).toBeTruthy();
 	});
 });
