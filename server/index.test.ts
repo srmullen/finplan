@@ -969,4 +969,34 @@ describe("GET * — static file handler", () => {
 		const res = await app.fetch(new Request("http://localhost/deep/route"));
 		expect(res.status).toBe(200);
 	});
+
+	it("serves index.html for the root path instead of treating it as a directory", async () => {
+		mockExistsSync.mockReturnValueOnce(true);
+		mockReadFileSync.mockReturnValueOnce("<html><head></head><body></body></html>");
+		const res = await app.fetch(new Request("http://localhost/"));
+		expect(res.status).toBe(200);
+		expect(mockExistsSync).toHaveBeenCalledTimes(1);
+		expect(mockExistsSync).toHaveBeenCalledWith("./dist/index.html");
+	});
+
+	it("injects the configured API key into index.html for the browser to read", async () => {
+		mockExistsSync.mockReturnValueOnce(false).mockReturnValueOnce(true);
+		mockReadFileSync.mockReturnValueOnce(
+			"<html><head></head><body></body></html>",
+		);
+		const res = await app.fetch(new Request("http://localhost/deep/route"));
+		const body = await res.text();
+		expect(body).toContain(
+			'<script>window.__FINPLAN_CONFIG__={"apiKey":"test-key"}</script></head>',
+		);
+		expect(res.headers.get("content-type")).toContain("text/html");
+	});
+
+	it("prepends the config script when index.html has no </head> tag", async () => {
+		mockExistsSync.mockReturnValueOnce(false).mockReturnValueOnce(true);
+		mockReadFileSync.mockReturnValueOnce("<body></body>");
+		const res = await app.fetch(new Request("http://localhost/deep/route"));
+		const body = await res.text();
+		expect(body.startsWith("<script>window.__FINPLAN_CONFIG__=")).toBe(true);
+	});
 });

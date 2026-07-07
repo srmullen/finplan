@@ -1,12 +1,21 @@
+# Pulls the private image published by ADR 0016. On a fresh host, log in
+# first with a token that has read:packages:
+#   docker login ghcr.io -u <github-username>
 services:
   finplan:
-    build: .
+    image: ghcr.io/srmullen/finplan:latest
+    restart: unless-stopped
     ports:
       - "3000:3000"
     volumes:
       - finplan-data:/data
     environment:
       FINPLAN_API_KEY: ${FINPLAN_API_KEY}
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
 volumes:
   finplan-data:
