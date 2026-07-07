@@ -1,4 +1,14 @@
-import { type Directory, dag, func, object } from "@dagger.io/dagger";
+import {
+	type Directory,
+	dag,
+	func,
+	object,
+	type Platform,
+	type Secret,
+} from "@dagger.io/dagger";
+
+const IMAGE = "ghcr.io/srmullen/finplan";
+const PLATFORMS = ["linux/amd64", "linux/arm64"] as Platform[];
 
 @object()
 // biome-ignore lint/correctness/noUnusedVariables: registered by @object() decorator
@@ -24,5 +34,33 @@ class Finplan {
 			.withExec(["npm", "run", "test:coverage"])
 			.withExec(["npm", "run", "build"])
 			.stdout();
+	}
+
+	/**
+	 * Build a multi-platform release image from the Dockerfile and push it to
+	 * GHCR, tagged with the given release tag and `latest`.
+	 */
+	@func()
+	async publish(
+		source: Directory,
+		tag: string,
+		registryToken: Secret,
+	): Promise<string> {
+		const buildContext = source
+			.withoutDirectory("node_modules")
+			.withoutDirectory(".git");
+
+		const variants = PLATFORMS.map((platform) =>
+			buildContext.dockerBuild({ platform }),
+		);
+
+		const publishTag = (t: string) =>
+			dag
+				.container()
+				.withRegistryAuth("ghcr.io", "srmullen", registryToken)
+				.publish(`${IMAGE}:${t}`, { platformVariants: variants });
+
+		await publishTag("latest");
+		return publishTag(tag);
 	}
 }
