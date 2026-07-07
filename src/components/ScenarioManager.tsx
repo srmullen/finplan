@@ -17,6 +17,7 @@ import ScheduleForm from "./ScheduleForm";
 interface Props {
 	activeScenarioIds: Set<string>;
 	onToggleScenario: (id: string) => void;
+	onScenarioUpdated?: () => void;
 }
 
 function ScenarioEditor({
@@ -276,6 +277,7 @@ function ScenarioEditor({
 export default function ScenarioManager({
 	activeScenarioIds,
 	onToggleScenario,
+	onScenarioUpdated,
 }: Props) {
 	const { scenarios, addScenario, updateScenario, deleteScenario } =
 		useScenarios();
@@ -416,7 +418,11 @@ export default function ScenarioManager({
 					accounts={accounts}
 					externalParties={externalParties}
 					schedules={schedules}
-					onUpdate={(updated) => void updateScenario(updated)}
+					onUpdate={(updated) => {
+						void updateScenario(updated).then((success) => {
+							if (success) onScenarioUpdated?.();
+						});
+					}}
 					onClose={() => setEditingId(null)}
 				/>
 			)}

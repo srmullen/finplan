@@ -136,6 +136,27 @@ describe("useScenarios — updateScenario", () => {
 		});
 		expect(result.current.error).toBeInstanceOf(Error);
 	});
+
+	it("resolves true on success", async () => {
+		const { result } = renderHook(() => useScenarios());
+		await act(async () => {});
+		let success: boolean | undefined;
+		await act(async () => {
+			success = await result.current.updateScenario(scenario);
+		});
+		expect(success).toBe(true);
+	});
+
+	it("resolves false when put fails", async () => {
+		mockPut.mockRejectedValue(new Error("Put failed"));
+		const { result } = renderHook(() => useScenarios());
+		await act(async () => {});
+		let success: boolean | undefined;
+		await act(async () => {
+			success = await result.current.updateScenario(scenario);
+		});
+		expect(success).toBe(false);
+	});
 });
 
 describe("useScenarios — deleteScenario", () => {
