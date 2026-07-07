@@ -3,7 +3,7 @@
 #   docker login ghcr.io -u <github-username>
 services:
   finplan:
-    image: ghcr.io/srmullen/finplan:v0.0.2
+    image: ghcr.io/srmullen/finplan:latest
     restart: unless-stopped
     ports:
       - "3000:3000"
