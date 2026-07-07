@@ -964,6 +964,32 @@ describe("GET * — static file handler", () => {
 		expect(res.status).toBe(200);
 	});
 
+	it("serves known file extensions with the correct content-type", async () => {
+		mockExistsSync.mockReturnValueOnce(true);
+		const jsRes = await app.fetch(
+			new Request("http://localhost/assets/index-abc123.js"),
+		);
+		expect(jsRes.headers.get("content-type")).toBe(
+			"text/javascript; charset=utf-8",
+		);
+
+		mockExistsSync.mockReturnValueOnce(true);
+		const cssRes = await app.fetch(
+			new Request("http://localhost/assets/index-abc123.css"),
+		);
+		expect(cssRes.headers.get("content-type")).toBe(
+			"text/css; charset=utf-8",
+		);
+	});
+
+	it("falls back to application/octet-stream for unknown extensions", async () => {
+		mockExistsSync.mockReturnValueOnce(true);
+		const res = await app.fetch(
+			new Request("http://localhost/assets/logo.png"),
+		);
+		expect(res.headers.get("content-type")).toBe("application/octet-stream");
+	});
+
 	it("returns index.html when file does not exist but index.html does", async () => {
 		mockExistsSync.mockReturnValueOnce(false).mockReturnValueOnce(true);
 		const res = await app.fetch(new Request("http://localhost/deep/route"));
