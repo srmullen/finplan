@@ -77,6 +77,7 @@ export default function ProjectionView() {
 	const [horizonMonths, setHorizonMonths] = useState(12);
 	const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
 	const [showScenarios, setShowScenarios] = useState(false);
+	const [hideBaseline, setHideBaseline] = useState(false);
 	const [activeScenarioIds, setActiveScenarioIds] = useState<Set<string>>(
 		new Set(),
 	);
@@ -198,6 +199,7 @@ export default function ProjectionView() {
 			const next = new Set(prev);
 			if (next.has(id)) next.delete(id);
 			else next.add(id);
+			if (next.size === 0) setHideBaseline(false);
 			return next;
 		});
 	}
@@ -231,6 +233,16 @@ export default function ProjectionView() {
 						Scenarios
 						{activeScenarioIds.size > 0 ? ` (${activeScenarioIds.size})` : ""}
 					</button>
+					{activeScenarioIds.size > 0 && (
+						<label style={styles.filterLabel}>
+							<input
+								type="checkbox"
+								checked={hideBaseline}
+								onChange={() => setHideBaseline((v) => !v)}
+							/>
+							Hide Baseline
+						</label>
+					)}
 				</div>
 			</div>
 
@@ -292,17 +304,18 @@ export default function ProjectionView() {
 									strokeWidth={1}
 								/>
 							))}
-							{visibleAccounts.map((a, i) => (
-								<Line
-									key={a.id}
-									type="monotone"
-									dataKey={a.id}
-									name={a.name}
-									stroke={PALETTE[i % PALETTE.length]}
-									dot={false}
-									strokeWidth={2}
-								/>
-							))}
+							{!hideBaseline &&
+								visibleAccounts.map((a, i) => (
+									<Line
+										key={a.id}
+										type="monotone"
+										dataKey={a.id}
+										name={a.name}
+										stroke={PALETTE[i % PALETTE.length]}
+										dot={false}
+										strokeWidth={2}
+									/>
+								))}
 							{[...activeScenarioIds].flatMap((scId) =>
 								visibleAccounts.map((a, i) => (
 									<Line
