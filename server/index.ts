@@ -67,6 +67,17 @@ export interface Stores {
 	adjustments: AdjustmentStore;
 }
 
+const MIME_TYPES: Record<string, string> = {
+	".js": "text/javascript; charset=utf-8",
+	".css": "text/css; charset=utf-8",
+	".html": "text/html; charset=utf-8",
+};
+
+function mimeTypeFor(path: string): string {
+	const ext = path.slice(path.lastIndexOf("."));
+	return MIME_TYPES[ext] ?? "application/octet-stream";
+}
+
 function validateGroupMembers(schedules: Schedule[]): string | null {
 	if (schedules.length < 2) {
 		return "A payment group requires at least two member schedules";
@@ -303,14 +314,27 @@ export function createApp(stores: Stores, apiKey: string): Hono {
 
 	app.get("*", (c) => {
 		const distDir = "./dist";
-		const filePath = `${distDir}${c.req.path}`;
+		const reqPath = c.req.path;
+		const filePath = `${distDir}${reqPath}`;
 
-		if (existsSync(filePath)) {
-			return new Response(readFileSync(filePath));
+		// Paths ending in "/" (e.g. "/") never name a file — treating them as
+		// one would resolve to a directory and crash readFileSync with EISDIR.
+		if (!reqPath.endsWith("/") && existsSync(filePath)) {
+			return new Response(readFileSync(filePath), {
+				headers: { "content-type": mimeTypeFor(filePath) },
+			});
 		}
 
-		if (existsSync(`${distDir}/index.html`)) {
-			return new Response(readFileSync(`${distDir}/index.html`));
+		const indexPath = `${distDir}/index.html`;
+		if (existsSync(indexPath)) {
+			const html = readFileSync(indexPath, "utf-8");
+			const config = `<script>window.__FINPLAN_CONFIG__=${JSON.stringify({ apiKey })}</script>`;
+			const injected = html.includes("</head>")
+				? html.replace("</head>", `${config}</head>`)
+				: `${config}${html}`;
+			return new Response(injected, {
+				headers: { "content-type": mimeTypeFor(indexPath) },
+			});
 		}
 
 		return c.text("Not found", 404);

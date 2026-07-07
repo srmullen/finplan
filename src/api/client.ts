@@ -1,5 +1,14 @@
+declare global {
+	interface Window {
+		__FINPLAN_CONFIG__?: { apiKey?: string };
+	}
+}
+
 const BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? "";
-const KEY = (import.meta.env.VITE_API_KEY as string | undefined) ?? "";
+const KEY =
+	window.__FINPLAN_CONFIG__?.apiKey ??
+	(import.meta.env.VITE_API_KEY as string | undefined) ??
+	"";
 
 function headers(): HeadersInit {
 	return {
