@@ -42,9 +42,10 @@ export function useScenarios() {
 			const e = err instanceof Error ? err : new Error(String(err));
 			setError(e);
 			toast.error(`Failed to update scenario: ${e.message}`);
-			return;
+			return false;
 		}
 		await refresh();
+		return true;
 	}
 
 	async function deleteScenario(id: string) {

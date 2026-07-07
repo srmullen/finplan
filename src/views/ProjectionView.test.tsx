@@ -12,13 +12,17 @@ import type { Account, ProjectionResult } from "../engine/types";
 vi.mock("@src/hooks/useAccounts");
 vi.mock("@src/api/client");
 let capturedToggleScenario: (id: string) => void = () => {};
+let capturedOnScenarioUpdated: () => void = () => {};
 vi.mock("@src/components/ScenarioManager", () => ({
 	default: ({
 		onToggleScenario,
+		onScenarioUpdated,
 	}: {
 		onToggleScenario: (id: string) => void;
+		onScenarioUpdated?: () => void;
 	}) => {
 		capturedToggleScenario = onToggleScenario;
+		if (onScenarioUpdated) capturedOnScenarioUpdated = onScenarioUpdated;
 		return <div data-testid="scenario-manager" />;
 	},
 }));
@@ -376,6 +380,56 @@ describe("ProjectionView — scenario fetching", () => {
 		// After toggling off, the scenario effect should not have fetched for sc-1 recently
 		const allCalls = vi.mocked(get).mock.calls.map(([url]) => url as string);
 		expect(allCalls.some((u) => u.includes("scenarioId=sc-1"))).toBe(true);
+	});
+
+	it("re-fetches active scenario projections when a scenario is edited", async () => {
+		setupMocks([account]);
+		render(<ProjectionView />);
+		await act(async () => {});
+
+		fireEvent.click(screen.getByRole("button", { name: "Scenarios" }));
+		await act(async () => {});
+
+		await act(async () => {
+			capturedToggleScenario("sc-1");
+		});
+		await act(async () => {});
+		await act(async () => {});
+
+		const callsBeforeEdit = vi
+			.mocked(get)
+			.mock.calls.filter(([url]) => (url as string).includes("scenarioId=sc-1"))
+			.length;
+
+		await act(async () => {
+			capturedOnScenarioUpdated();
+		});
+		await act(async () => {});
+
+		const callsAfterEdit = vi
+			.mocked(get)
+			.mock.calls.filter(([url]) => (url as string).includes("scenarioId=sc-1"))
+			.length;
+
+		expect(callsAfterEdit).toBeGreaterThan(callsBeforeEdit);
+	});
+
+	it("does not trigger a scenario fetch on edit when no scenarios are active", async () => {
+		setupMocks([account]);
+		render(<ProjectionView />);
+		await act(async () => {});
+
+		fireEvent.click(screen.getByRole("button", { name: "Scenarios" }));
+		await act(async () => {});
+
+		const callsBefore = vi.mocked(get).mock.calls.length;
+
+		await act(async () => {
+			capturedOnScenarioUpdated();
+		});
+		await act(async () => {});
+
+		expect(vi.mocked(get).mock.calls.length).toBe(callsBefore);
 	});
 
 	it("covers all chartData branch paths: missing result, missing point, and scenario data", async () => {

@@ -80,6 +80,7 @@ export default function ProjectionView() {
 	const [activeScenarioIds, setActiveScenarioIds] = useState<Set<string>>(
 		new Set(),
 	);
+	const [scenarioVersion, setScenarioVersion] = useState(0);
 
 	const [result, setResult] = useState<ProjectionResult>({});
 	const [scenarioResults, setScenarioResults] = useState<
@@ -116,6 +117,7 @@ export default function ProjectionView() {
 		);
 	}, [accounts, startDate, endDate]);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: scenarioVersion is a deliberate re-fetch trigger, not read in the effect body
 	useEffect(() => {
 		if (activeScenarioIds.size === 0) {
 			setScenarioResults({});
@@ -133,7 +135,7 @@ export default function ProjectionView() {
 			if (scenarioFetchIdRef.current !== id) return;
 			setScenarioResults(Object.fromEntries(entries));
 		});
-	}, [activeScenarioIds, startDate, endDate]);
+	}, [activeScenarioIds, startDate, endDate, scenarioVersion]);
 
 	const visibleAccounts = accounts.filter((a) => !hiddenIds.has(a.id));
 
@@ -322,6 +324,7 @@ export default function ProjectionView() {
 						<ScenarioManager
 							activeScenarioIds={activeScenarioIds}
 							onToggleScenario={toggleScenario}
+							onScenarioUpdated={() => setScenarioVersion((v) => v + 1)}
 						/>
 					)}
 				</>

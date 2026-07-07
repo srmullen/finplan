@@ -80,6 +80,7 @@ function setupHooks(scenarios: Scenario[], schedules: Schedule[] = []) {
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	mockUpdateScenario.mockResolvedValue(true);
 	setupHooks([]);
 });
 
@@ -553,6 +554,63 @@ describe("ScenarioManager — editor with schedule overrides", () => {
 		expect(
 			call.scheduleOverrides.find((o) => o.scheduleId === "s-2")?.amount,
 		).toBe(300);
+	});
+});
+
+describe("ScenarioManager — onScenarioUpdated", () => {
+	beforeEach(() => setupHooks([scenario], [scheduleA]));
+
+	it("calls onScenarioUpdated after a successful edit", async () => {
+		const onScenarioUpdated = vi.fn();
+		render(
+			<ScenarioManager
+				activeScenarioIds={new Set()}
+				onToggleScenario={onToggleScenario}
+				onScenarioUpdated={onScenarioUpdated}
+			/>,
+		);
+		fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+		await act(async () => {
+			fireEvent.change(screen.getByPlaceholderText("500"), {
+				target: { value: "750" },
+			});
+		});
+		expect(onScenarioUpdated).toHaveBeenCalledTimes(1);
+	});
+
+	it("does not call onScenarioUpdated when the update fails", async () => {
+		mockUpdateScenario.mockResolvedValueOnce(false);
+		const onScenarioUpdated = vi.fn();
+		render(
+			<ScenarioManager
+				activeScenarioIds={new Set()}
+				onToggleScenario={onToggleScenario}
+				onScenarioUpdated={onScenarioUpdated}
+			/>,
+		);
+		fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+		await act(async () => {
+			fireEvent.change(screen.getByPlaceholderText("500"), {
+				target: { value: "750" },
+			});
+		});
+		expect(onScenarioUpdated).not.toHaveBeenCalled();
+	});
+
+	it("does not throw when onScenarioUpdated is not provided", async () => {
+		render(
+			<ScenarioManager
+				activeScenarioIds={new Set()}
+				onToggleScenario={onToggleScenario}
+			/>,
+		);
+		fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+		await act(async () => {
+			fireEvent.change(screen.getByPlaceholderText("500"), {
+				target: { value: "750" },
+			});
+		});
+		expect(mockUpdateScenario).toHaveBeenCalled();
 	});
 });
 
