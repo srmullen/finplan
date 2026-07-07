@@ -65,9 +65,8 @@ function findCrossings(
 const HORIZON_OPTIONS_MONTHS = [3, 6, 12, 24, 60, 120, 240, 360];
 
 function formatHorizonLabel(months: number): string {
-	if (months <= 12) return `${months} month${months === 1 ? "" : "s"}`;
-	const years = months / 12;
-	return `${years} year${years === 1 ? "" : "s"}`;
+	if (months <= 12) return `${months} months`;
+	return `${months / 12} years`;
 }
 
 function buildProjectionUrl(
