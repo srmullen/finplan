@@ -304,6 +304,95 @@ describe("ProjectionView — stale scenario fetch guard", () => {
 	});
 });
 
+describe("ProjectionView — Hide Baseline toggle", () => {
+	beforeEach(() => setupMocks([account]));
+
+	it("does not show the Hide Baseline toggle when no scenarios are active", async () => {
+		render(<ProjectionView />);
+		await act(async () => {});
+		expect(screen.queryByText("Hide Baseline")).toBeNull();
+	});
+
+	it("shows the Hide Baseline toggle once a scenario is active", async () => {
+		render(<ProjectionView />);
+		await act(async () => {});
+
+		fireEvent.click(screen.getByRole("button", { name: "Scenarios" }));
+		await act(async () => {});
+		await act(async () => {
+			capturedToggleScenario("sc-1");
+		});
+		await act(async () => {});
+
+		expect(screen.getByText("Hide Baseline")).toBeTruthy();
+	});
+
+	it("defaults to off, rendering baseline lines", async () => {
+		render(<ProjectionView />);
+		await act(async () => {});
+
+		fireEvent.click(screen.getByRole("button", { name: "Scenarios" }));
+		await act(async () => {});
+		await act(async () => {
+			capturedToggleScenario("sc-1");
+		});
+		await act(async () => {});
+
+		const checkbox = screen.getByLabelText("Hide Baseline") as HTMLInputElement;
+		expect(checkbox.checked).toBe(false);
+	});
+
+	it("toggling it on and off flips the checked state", async () => {
+		render(<ProjectionView />);
+		await act(async () => {});
+
+		fireEvent.click(screen.getByRole("button", { name: "Scenarios" }));
+		await act(async () => {});
+		await act(async () => {
+			capturedToggleScenario("sc-1");
+		});
+		await act(async () => {});
+
+		const checkbox = screen.getByLabelText("Hide Baseline") as HTMLInputElement;
+		fireEvent.click(checkbox);
+		expect(checkbox.checked).toBe(true);
+		fireEvent.click(checkbox);
+		expect(checkbox.checked).toBe(false);
+	});
+
+	it("resets to off and hides the toggle when the last scenario is toggled off", async () => {
+		render(<ProjectionView />);
+		await act(async () => {});
+
+		fireEvent.click(screen.getByRole("button", { name: "Scenarios" }));
+		await act(async () => {});
+		await act(async () => {
+			capturedToggleScenario("sc-1");
+		});
+		await act(async () => {});
+
+		const checkbox = screen.getByLabelText("Hide Baseline") as HTMLInputElement;
+		fireEvent.click(checkbox);
+		expect(checkbox.checked).toBe(true);
+
+		await act(async () => {
+			capturedToggleScenario("sc-1");
+		});
+		await act(async () => {});
+
+		expect(screen.queryByText("Hide Baseline")).toBeNull();
+
+		await act(async () => {
+			capturedToggleScenario("sc-1");
+		});
+		await act(async () => {});
+
+		expect(
+			(screen.getByLabelText("Hide Baseline") as HTMLInputElement).checked,
+		).toBe(false);
+	});
+});
+
 describe("ProjectionView — chart formatters", () => {
 	beforeEach(() => setupMocks([account]));
 

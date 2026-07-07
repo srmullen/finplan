@@ -58,8 +58,9 @@ export default function DocsView() {
 				<DocsBlock label="How to use it">
 					Pick a horizon from the dropdown, hide accounts with the checkboxes,
 					and open "Scenarios" to overlay a what-if as a dashed line without
-					touching your real plan. Milestones like an account being paid off
-					appear right on the chart.
+					touching your real plan. Once a scenario is active, check "Hide
+					Baseline" to drop the solid lines and focus on the scenario alone.
+					Milestones like an account being paid off appear right on the chart.
 				</DocsBlock>
 			</section>
 
