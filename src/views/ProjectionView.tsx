@@ -62,6 +62,14 @@ function findCrossings(
 	return dates;
 }
 
+const HORIZON_OPTIONS_MONTHS = [3, 6, 12, 24, 60, 120, 240, 360];
+
+function formatHorizonLabel(months: number): string {
+	if (months <= 12) return `${months} month${months === 1 ? "" : "s"}`;
+	const years = months / 12;
+	return `${years} year${years === 1 ? "" : "s"}`;
+}
+
 function buildProjectionUrl(
 	startDate: string,
 	endDate: string,
@@ -218,9 +226,9 @@ export default function ProjectionView() {
 							value={horizonMonths}
 							onChange={(e) => setHorizonMonths(Number(e.target.value))}
 						>
-							{[3, 6, 12, 24, 36, 60].map((m) => (
+							{HORIZON_OPTIONS_MONTHS.map((m) => (
 								<option key={m} value={m}>
-									{m} months
+									{formatHorizonLabel(m)}
 								</option>
 							))}
 						</select>

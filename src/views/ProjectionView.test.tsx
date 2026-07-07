@@ -176,6 +176,25 @@ describe("ProjectionView — with accounts", () => {
 		await act(async () => {});
 		expect(vi.mocked(get).mock.calls.length).toBeGreaterThan(callsBefore);
 	});
+
+	it("defaults to a 12 month horizon and offers retirement-scale year options", async () => {
+		render(<ProjectionView />);
+		await act(async () => {});
+		const select = screen.getByRole("combobox") as HTMLSelectElement;
+		expect(select.value).toBe("12");
+
+		const optionLabels = Array.from(select.options).map((o) => o.text);
+		expect(optionLabels).toEqual([
+			"3 months",
+			"6 months",
+			"12 months",
+			"2 years",
+			"5 years",
+			"10 years",
+			"20 years",
+			"30 years",
+		]);
+	});
 });
 
 describe("ProjectionView — amortizing balance display", () => {
