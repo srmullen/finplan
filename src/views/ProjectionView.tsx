@@ -117,6 +117,7 @@ export default function ProjectionView() {
 		);
 	}, [accounts, startDate, endDate]);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: scenarioVersion is a deliberate re-fetch trigger, not read in the effect body
 	useEffect(() => {
 		if (activeScenarioIds.size === 0) {
 			setScenarioResults({});
