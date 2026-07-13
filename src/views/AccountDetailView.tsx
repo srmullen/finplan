@@ -125,6 +125,9 @@ export default function AccountDetailView() {
 
 	const noNodes = accounts.length + externalParties.length < 2;
 
+	const goesNegative =
+		!account.amortizing && projection.some((p) => p.balance < 0);
+
 	return (
 		<div>
 			<Link to="/accounts" style={styles.backLink}>
@@ -160,6 +163,12 @@ export default function AccountDetailView() {
 					</div>
 				</div>
 			</div>
+
+			{goesNegative && (
+				<div role="alert" style={styles.warningBanner}>
+					This account is projected to go negative within the next 12 months.
+				</div>
+			)}
 
 			<section style={styles.section}>
 				<div style={styles.sectionHeader}>
@@ -302,6 +311,15 @@ const styles = {
 		fontSize: "0.875rem",
 	},
 	balanceBlock: { textAlign: "right" as const },
+	warningBanner: {
+		marginBottom: "1.5rem",
+		padding: "0.75rem 1rem",
+		background: "#fef2f2",
+		border: "1px solid #fca5a5",
+		borderRadius: "6px",
+		color: "#991b1b",
+		fontSize: "0.875rem",
+	},
 	seedBalance: {
 		fontSize: "1.5rem",
 		fontWeight: 700,
