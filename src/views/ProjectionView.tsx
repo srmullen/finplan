@@ -14,6 +14,7 @@ import { get } from "../api/client";
 import ScenarioManager from "../components/ScenarioManager";
 import type { ProjectionResult } from "../engine/types";
 import { useAccounts } from "../hooks/useAccounts";
+import { useScenarios } from "../hooks/useScenarios";
 import { displayBalance } from "../utils/displayBalance";
 
 const PALETTE = [
@@ -81,6 +82,7 @@ function buildProjectionUrl(
 
 export default function ProjectionView() {
 	const { accounts } = useAccounts();
+	const { scenarios } = useScenarios();
 	const [horizonMonths, setHorizonMonths] = useState(12);
 	const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
 	const [showScenarios, setShowScenarios] = useState(false);
@@ -192,6 +194,31 @@ export default function ProjectionView() {
 		}
 	}
 
+	const negativeWarnings: { accountId: string; accountName: string; source: string }[] =
+		[];
+	for (const account of visibleAccounts) {
+		if (account.amortizing) continue;
+		if ((result[account.id] ?? []).some((p) => p.balance < 0)) {
+			negativeWarnings.push({
+				accountId: account.id,
+				accountName: account.name,
+				source: "Baseline",
+			});
+		}
+		for (const scId of activeScenarioIds) {
+			const scSeries = scenarioResults[scId]?.[account.id] ?? [];
+			if (scSeries.some((p) => p.balance < 0)) {
+				const scenarioName =
+					scenarios.find((s) => s.id === scId)?.name ?? "Scenario";
+				negativeWarnings.push({
+					accountId: account.id,
+					accountName: account.name,
+					source: `${scenarioName} (scenario)`,
+				});
+			}
+		}
+	}
+
 	function toggleAccount(id: string) {
 		setHiddenIds((prev) => {
 			const next = new Set(prev);
@@ -273,6 +300,21 @@ export default function ProjectionView() {
 							</label>
 						))}
 					</div>
+
+					{negativeWarnings.length > 0 && (
+						<div role="alert" style={styles.warningBanner}>
+							<div style={styles.warningTitle}>
+								Accounts projected to go negative
+							</div>
+							<ul style={styles.warningList}>
+								{negativeWarnings.map((w) => (
+									<li key={`${w.accountId}-${w.source}`}>
+										{w.accountName} — {w.source}
+									</li>
+								))}
+							</ul>
+						</div>
+					)}
 
 					{milestones.length > 0 && (
 						<div style={styles.milestones}>
@@ -390,5 +432,16 @@ const styles = {
 		fontSize: "0.8rem",
 	},
 	milestone: { fontWeight: 500 },
+	warningBanner: {
+		marginBottom: "1rem",
+		padding: "0.75rem 1rem",
+		background: "#fef2f2",
+		border: "1px solid #fca5a5",
+		borderRadius: "6px",
+		color: "#991b1b",
+		fontSize: "0.875rem",
+	},
+	warningTitle: { fontWeight: 600, marginBottom: "0.25rem" },
+	warningList: { margin: 0, paddingLeft: "1.25rem" },
 	empty: { color: "#9ca3af" },
 };

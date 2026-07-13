@@ -7,9 +7,10 @@ import {
 	screen,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Account, ProjectionResult } from "../engine/types";
+import type { Account, ProjectionResult, Scenario } from "../engine/types";
 
 vi.mock("@src/hooks/useAccounts");
+vi.mock("@src/hooks/useScenarios");
 vi.mock("@src/api/client");
 let capturedToggleScenario: (id: string) => void = () => {};
 let capturedOnScenarioUpdated: () => void = () => {};
@@ -61,6 +62,7 @@ vi.mock("recharts", () => ({
 
 import { get } from "@src/api/client";
 import { useAccounts } from "@src/hooks/useAccounts";
+import { useScenarios } from "@src/hooks/useScenarios";
 import ProjectionView from "./ProjectionView";
 
 const account: Account = {
@@ -93,7 +95,7 @@ const projectionResult: ProjectionResult = {
 	],
 };
 
-function setupMocks(accounts: Account[] = []) {
+function setupMocks(accounts: Account[] = [], scenarios: Scenario[] = []) {
 	vi.mocked(useAccounts).mockReturnValue({
 		accounts,
 		addAccount: vi.fn(),
@@ -102,6 +104,13 @@ function setupMocks(accounts: Account[] = []) {
 		refresh: vi.fn(),
 		error: null,
 	} as ReturnType<typeof useAccounts>);
+	vi.mocked(useScenarios).mockReturnValue({
+		scenarios,
+		error: null,
+		addScenario: vi.fn(),
+		updateScenario: vi.fn(),
+		deleteScenario: vi.fn(),
+	} as ReturnType<typeof useScenarios>);
 }
 
 beforeEach(() => {
@@ -237,6 +246,106 @@ describe("ProjectionView — milestones (amortizing payoff)", () => {
 		render(<ProjectionView />);
 		await act(async () => {});
 		expect(screen.getByText(/Checking negative/)).toBeTruthy();
+	});
+});
+
+describe("ProjectionView — negative balance banner", () => {
+	it("shows a warning when a visible account's baseline projection goes negative", async () => {
+		setupMocks([account]);
+		vi.mocked(get).mockResolvedValue({
+			"acc-1": [
+				{ date: "2024-01-01", balance: 100 },
+				{ date: "2024-02-01", balance: -50 },
+			],
+		});
+		render(<ProjectionView />);
+		await act(async () => {});
+		expect(screen.getByRole("alert")).toBeTruthy();
+		expect(screen.getByText("Checking — Baseline")).toBeTruthy();
+	});
+
+	it("shows no warning when the account's projection stays non-negative", async () => {
+		setupMocks([account]);
+		render(<ProjectionView />);
+		await act(async () => {});
+		expect(screen.queryByRole("alert")).toBeNull();
+	});
+
+	it("never shows the warning for an amortizing account, even with a negative raw balance", async () => {
+		setupMocks([amortizingAccount]);
+		vi.mocked(get).mockResolvedValue({
+			"loan-1": [{ date: "2024-01-01", balance: -10000 }],
+		});
+		render(<ProjectionView />);
+		await act(async () => {});
+		expect(screen.queryByRole("alert")).toBeNull();
+	});
+
+	it("removes an account from the banner when it is hidden via the filter checkbox", async () => {
+		setupMocks([account]);
+		vi.mocked(get).mockResolvedValue({
+			"acc-1": [
+				{ date: "2024-01-01", balance: 100 },
+				{ date: "2024-02-01", balance: -50 },
+			],
+		});
+		render(<ProjectionView />);
+		await act(async () => {});
+		expect(screen.getByRole("alert")).toBeTruthy();
+
+		fireEvent.click(screen.getAllByRole("checkbox")[0]!);
+		await act(async () => {});
+		expect(screen.queryByRole("alert")).toBeNull();
+	});
+
+	it("shows a scenario-only warning labeled distinctly from Baseline", async () => {
+		setupMocks([account], [
+			{
+				id: "sc-1",
+				name: "Job loss",
+				scheduleOverrides: [],
+				additionalSchedules: [],
+				additionalAccounts: [],
+			},
+		]);
+		vi.mocked(get)
+			.mockResolvedValueOnce(projectionResult) // baseline stays positive
+			.mockResolvedValue({
+				"acc-1": [{ date: "2024-01-01", balance: -300 }],
+			}); // scenario goes negative
+
+		render(<ProjectionView />);
+		await act(async () => {});
+
+		fireEvent.click(screen.getByRole("button", { name: "Scenarios" }));
+		await act(async () => {});
+		await act(async () => {
+			capturedToggleScenario("sc-1");
+		});
+		await act(async () => {});
+
+		expect(screen.getByText("Checking — Job loss (scenario)")).toBeTruthy();
+	});
+
+	it("falls back to a generic scenario label when the scenario name can't be found", async () => {
+		setupMocks([account], []); // scenario list empty, so lookup misses
+		vi.mocked(get)
+			.mockResolvedValueOnce(projectionResult)
+			.mockResolvedValue({
+				"acc-1": [{ date: "2024-01-01", balance: -300 }],
+			});
+
+		render(<ProjectionView />);
+		await act(async () => {});
+
+		fireEvent.click(screen.getByRole("button", { name: "Scenarios" }));
+		await act(async () => {});
+		await act(async () => {
+			capturedToggleScenario("sc-1");
+		});
+		await act(async () => {});
+
+		expect(screen.getByText("Checking — Scenario (scenario)")).toBeTruthy();
 	});
 });
 
