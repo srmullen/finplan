@@ -281,6 +281,29 @@ describe("ProjectionView — negative balance banner", () => {
 		expect(screen.queryByRole("alert")).toBeNull();
 	});
 
+	it("updates the banner when the horizon selector changes", async () => {
+		setupMocks([account]);
+		vi.mocked(get)
+			.mockResolvedValueOnce(projectionResult) // initial 12-month horizon: stays positive
+			.mockResolvedValue({
+				"acc-1": [
+					{ date: "2024-01-01", balance: 100 },
+					{ date: "2025-06-01", balance: -50 },
+				],
+			}); // wider horizon reveals a dip below zero
+
+		render(<ProjectionView />);
+		await act(async () => {});
+		expect(screen.queryByRole("alert")).toBeNull();
+
+		fireEvent.change(screen.getByRole("combobox"), {
+			target: { value: "24" },
+		});
+		await act(async () => {});
+
+		expect(screen.getByRole("alert")).toBeTruthy();
+	});
+
 	it("removes an account from the banner when it is hidden via the filter checkbox", async () => {
 		setupMocks([account]);
 		vi.mocked(get).mockResolvedValue({
