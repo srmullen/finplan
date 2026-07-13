@@ -7,10 +7,18 @@ import {
 	screen,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Account, ProjectionResult, Scenario } from "../engine/types";
+import type {
+	Account,
+	ExternalParty,
+	ProjectionResult,
+	Scenario,
+	Schedule,
+} from "../engine/types";
 
 vi.mock("@src/hooks/useAccounts");
 vi.mock("@src/hooks/useScenarios");
+vi.mock("@src/hooks/useSchedules");
+vi.mock("@src/hooks/useExternalParties");
 vi.mock("@src/api/client");
 let capturedToggleScenario: (id: string) => void = () => {};
 let capturedOnScenarioUpdated: () => void = () => {};
@@ -62,7 +70,9 @@ vi.mock("recharts", () => ({
 
 import { get } from "@src/api/client";
 import { useAccounts } from "@src/hooks/useAccounts";
+import { useExternalParties } from "@src/hooks/useExternalParties";
 import { useScenarios } from "@src/hooks/useScenarios";
+import { useSchedules } from "@src/hooks/useSchedules";
 import ProjectionView from "./ProjectionView";
 
 const account: Account = {
@@ -74,6 +84,37 @@ const account: Account = {
 	seedDate: "2024-01-01",
 	rate: 0,
 	amortizing: false,
+};
+
+const creditCard: Account = {
+	...account,
+	id: "acc-cc",
+	name: "Credit Card",
+	type: "credit_card",
+};
+
+const employer: ExternalParty = { id: "party-employer", name: "Employer" };
+
+const incomeSchedule: Schedule = {
+	id: "s-income",
+	sourceId: "party-employer",
+	destinationId: "acc-1",
+	amount: 3000,
+	estimated: false,
+	frequency: "monthly",
+	startDate: "2024-01-01",
+	terminateAtZero: false,
+};
+
+const debtPayment: Schedule = {
+	id: "s-debt",
+	sourceId: "acc-1",
+	destinationId: "acc-cc",
+	amount: 200,
+	estimated: false,
+	frequency: "monthly",
+	startDate: "2024-01-01",
+	terminateAtZero: false,
 };
 
 const amortizingAccount: Account = {
@@ -95,7 +136,12 @@ const projectionResult: ProjectionResult = {
 	],
 };
 
-function setupMocks(accounts: Account[] = [], scenarios: Scenario[] = []) {
+function setupMocks(
+	accounts: Account[] = [],
+	scenarios: Scenario[] = [],
+	schedules: Schedule[] = [],
+	externalParties: ExternalParty[] = [],
+) {
 	vi.mocked(useAccounts).mockReturnValue({
 		accounts,
 		addAccount: vi.fn(),
@@ -111,6 +157,21 @@ function setupMocks(accounts: Account[] = [], scenarios: Scenario[] = []) {
 		updateScenario: vi.fn(),
 		deleteScenario: vi.fn(),
 	} as ReturnType<typeof useScenarios>);
+	vi.mocked(useSchedules).mockReturnValue({
+		schedules,
+		error: null,
+		addSchedule: vi.fn(),
+		updateSchedule: vi.fn(),
+		deleteSchedule: vi.fn(),
+		refresh: vi.fn(),
+	} as ReturnType<typeof useSchedules>);
+	vi.mocked(useExternalParties).mockReturnValue({
+		externalParties,
+		error: null,
+		addParty: vi.fn(),
+		updateParty: vi.fn(),
+		deleteParty: vi.fn(),
+	} as ReturnType<typeof useExternalParties>);
 }
 
 beforeEach(() => {
@@ -707,5 +768,199 @@ describe("ProjectionView — scenario fetching", () => {
 		await act(async () => {});
 		await act(async () => {});
 		await act(async () => {});
+	});
+});
+
+describe("ProjectionView — cash flow totals", () => {
+	it("renders unlabeled baseline Total In/Out with monthly and horizon-cumulative figures", async () => {
+		setupMocks(
+			[account, creditCard],
+			[],
+			[incomeSchedule, debtPayment],
+			[employer],
+		);
+		render(<ProjectionView />);
+		await act(async () => {});
+
+		expect(screen.getByTestId("total-in-baseline").textContent).toBe(
+			"$3,000/mo",
+		);
+		expect(screen.getByTestId("total-out-baseline").textContent).toBe(
+			"$200/mo",
+		);
+		expect(
+			screen.getByTestId("total-in-cumulative-baseline").textContent,
+		).toContain("over horizon");
+		expect(screen.queryByText("Baseline")).toBeNull();
+	});
+
+	it("shows separate Baseline and Scenario groups once a scenario is active", async () => {
+		const scenario: Scenario = {
+			id: "sc-1",
+			name: "Raise",
+			scheduleOverrides: [],
+			additionalSchedules: [
+				{
+					id: "s-bonus",
+					sourceId: "party-employer",
+					destinationId: "acc-1",
+					amount: 500,
+					estimated: false,
+					frequency: "monthly",
+					startDate: "2024-01-01",
+					terminateAtZero: false,
+				},
+			],
+			additionalAccounts: [],
+		};
+		setupMocks([account], [scenario], [incomeSchedule], [employer]);
+		render(<ProjectionView />);
+		await act(async () => {});
+
+		fireEvent.click(screen.getByRole("button", { name: "Scenarios" }));
+		await act(async () => {});
+		await act(async () => {
+			capturedToggleScenario("sc-1");
+		});
+		await act(async () => {});
+
+		expect(screen.getByText("Baseline")).toBeTruthy();
+		expect(screen.getByText("Raise")).toBeTruthy();
+		expect(screen.getByTestId("total-in-baseline").textContent).toBe(
+			"$3,000/mo",
+		);
+		expect(screen.getByTestId("total-in-sc-1").textContent).toBe("$3,500/mo");
+	});
+
+	it("applies a scenario's schedule override to its Total In/Out group", async () => {
+		const scenario: Scenario = {
+			id: "sc-1",
+			name: "Pay raise",
+			scheduleOverrides: [{ scheduleId: "s-income", amount: 4000 }],
+			additionalSchedules: [],
+			additionalAccounts: [],
+		};
+		setupMocks([account], [scenario], [incomeSchedule], [employer]);
+		render(<ProjectionView />);
+		await act(async () => {});
+
+		fireEvent.click(screen.getByRole("button", { name: "Scenarios" }));
+		await act(async () => {});
+		await act(async () => {
+			capturedToggleScenario("sc-1");
+		});
+		await act(async () => {});
+
+		expect(screen.getByTestId("total-in-baseline").textContent).toBe(
+			"$3,000/mo",
+		);
+		expect(screen.getByTestId("total-in-sc-1").textContent).toBe("$4,000/mo");
+	});
+
+	it("includes a scenario-only additional account as an in-flow destination, always treated as visible", async () => {
+		const scenario: Scenario = {
+			id: "sc-1",
+			name: "New side gig",
+			scheduleOverrides: [],
+			additionalSchedules: [
+				{
+					id: "s-side-gig",
+					sourceId: "party-employer",
+					destinationId: "acc-side",
+					amount: 700,
+					estimated: false,
+					frequency: "monthly",
+					startDate: "2024-01-01",
+					terminateAtZero: false,
+				},
+			],
+			additionalAccounts: [
+				{
+					id: "acc-side",
+					name: "Side Gig Account",
+					type: "checking",
+					owner: "Sean",
+					seedBalance: 0,
+					seedDate: "2024-01-01",
+					rate: 0,
+					amortizing: false,
+				},
+			],
+		};
+		setupMocks([account], [scenario], [incomeSchedule], [employer]);
+		render(<ProjectionView />);
+		await act(async () => {});
+
+		fireEvent.click(screen.getByRole("button", { name: "Scenarios" }));
+		await act(async () => {});
+		await act(async () => {
+			capturedToggleScenario("sc-1");
+		});
+		await act(async () => {});
+
+		expect(screen.getByTestId("total-in-sc-1").textContent).toBe("$3,700/mo");
+	});
+
+	it("skips rendering a group for an active scenario id no longer present in the scenarios list", async () => {
+		setupMocks([account], [], [incomeSchedule], [employer]);
+		render(<ProjectionView />);
+		await act(async () => {});
+
+		fireEvent.click(screen.getByRole("button", { name: "Scenarios" }));
+		await act(async () => {});
+		await act(async () => {
+			capturedToggleScenario("sc-missing");
+		});
+		await act(async () => {});
+
+		expect(screen.queryByTestId("total-in-sc-missing")).toBeNull();
+	});
+
+	it("excludes a flow from totals when its only Account endpoint is hidden", async () => {
+		setupMocks([account], [], [incomeSchedule], [employer]);
+		render(<ProjectionView />);
+		await act(async () => {});
+
+		fireEvent.click(screen.getAllByRole("checkbox")[0]!);
+		await act(async () => {});
+
+		expect(screen.getByTestId("total-in-baseline").textContent).toBe("$0/mo");
+	});
+
+	it("still counts a flow where one of two Account endpoints is visible", async () => {
+		setupMocks([account, creditCard], [], [debtPayment], []);
+		render(<ProjectionView />);
+		await act(async () => {});
+
+		// Hide the credit card (second checkbox); Checking stays visible.
+		fireEvent.click(screen.getAllByRole("checkbox")[1]!);
+		await act(async () => {});
+
+		expect(screen.getByTestId("total-out-baseline").textContent).toBe(
+			"$200/mo",
+		);
+	});
+
+	it("updates the cumulative total but not the monthly rate when the horizon changes", async () => {
+		setupMocks([account], [], [incomeSchedule], [employer]);
+		render(<ProjectionView />);
+		await act(async () => {});
+
+		const monthlyBefore = screen.getByTestId("total-in-baseline").textContent;
+		const cumulativeBefore = screen.getByTestId(
+			"total-in-cumulative-baseline",
+		).textContent;
+
+		fireEvent.change(screen.getByRole("combobox"), {
+			target: { value: "24" },
+		});
+		await act(async () => {});
+
+		expect(screen.getByTestId("total-in-baseline").textContent).toBe(
+			monthlyBefore,
+		);
+		expect(
+			screen.getByTestId("total-in-cumulative-baseline").textContent,
+		).not.toBe(cumulativeBefore);
 	});
 });

@@ -73,6 +73,19 @@ export default function DocsView() {
 					negative. Loans never trigger this warning, since paying down to zero
 					is expected.
 				</DocsBlock>
+				<DocsBlock label="Total In / Total Out">
+					Above the chart, Total In and Total Out show the same
+					monthly-equivalent figures as the Schedules page, plus a second
+					number: the actual total that's expected to move over your selected
+					horizon. Changing the horizon updates that second figure but not the
+					monthly-equivalent one. Both figures only count flows touching an
+					account that's currently checked in the filter — a transfer with one
+					checked and one hidden endpoint (like paying down a hidden credit card
+					from a visible checking account) still counts. Once you have one or
+					more Scenarios active, Baseline and each Scenario get their own Total
+					In/Out instead of one blended number, matching the separate lines
+					already drawn on the chart.
+				</DocsBlock>
 			</section>
 
 			<hr style={styles.divider} />

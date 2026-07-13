@@ -12,9 +12,17 @@ import {
 } from "recharts";
 import { get } from "../api/client";
 import ScenarioManager from "../components/ScenarioManager";
+import { resolveSchedules } from "../engine/projection";
 import type { ProjectionResult } from "../engine/types";
 import { useAccounts } from "../hooks/useAccounts";
+import { useExternalParties } from "../hooks/useExternalParties";
 import { useScenarios } from "../hooks/useScenarios";
+import { useSchedules } from "../hooks/useSchedules";
+import {
+	type CashFlowTotals,
+	computeCashFlowTotals,
+	computeHorizonCashFlowTotals,
+} from "../utils/cashFlow";
 import { displayBalance } from "../utils/displayBalance";
 
 const PALETTE = [
@@ -80,9 +88,18 @@ function buildProjectionUrl(
 	return `/api/projection?${params.toString()}`;
 }
 
+interface CashFlowGroup {
+	key: string;
+	label: string;
+	monthly: CashFlowTotals;
+	cumulative: CashFlowTotals;
+}
+
 export default function ProjectionView() {
 	const { accounts } = useAccounts();
 	const { scenarios } = useScenarios();
+	const { schedules } = useSchedules();
+	const { externalParties } = useExternalParties();
 	const [horizonMonths, setHorizonMonths] = useState(12);
 	const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
 	const [showScenarios, setShowScenarios] = useState(false);
@@ -148,6 +165,60 @@ export default function ProjectionView() {
 	}, [activeScenarioIds, startDate, endDate, scenarioVersion]);
 
 	const visibleAccounts = accounts.filter((a) => !hiddenIds.has(a.id));
+	const visibleAccountIds = new Set(visibleAccounts.map((a) => a.id));
+
+	const cashFlowGroups: CashFlowGroup[] = [
+		{
+			key: "baseline",
+			label: "Baseline",
+			monthly: computeCashFlowTotals(
+				schedules,
+				accounts,
+				externalParties,
+				startDate,
+				visibleAccountIds,
+			),
+			cumulative: computeHorizonCashFlowTotals(
+				schedules,
+				accounts,
+				externalParties,
+				startDate,
+				endDate,
+				visibleAccountIds,
+			),
+		},
+	];
+	for (const scId of activeScenarioIds) {
+		const scenario = scenarios.find((s) => s.id === scId);
+		if (!scenario) continue;
+
+		const resolvedSchedules = resolveSchedules(schedules, scenario);
+		const scenarioAccounts = [...accounts, ...scenario.additionalAccounts];
+		const scenarioVisibleIds = new Set([
+			...visibleAccountIds,
+			...scenario.additionalAccounts.map((a) => a.id),
+		]);
+
+		cashFlowGroups.push({
+			key: scId,
+			label: scenario.name,
+			monthly: computeCashFlowTotals(
+				resolvedSchedules,
+				scenarioAccounts,
+				externalParties,
+				startDate,
+				scenarioVisibleIds,
+			),
+			cumulative: computeHorizonCashFlowTotals(
+				resolvedSchedules,
+				scenarioAccounts,
+				externalParties,
+				startDate,
+				endDate,
+				scenarioVisibleIds,
+			),
+		});
+	}
 
 	const refSeries =
 		visibleAccounts.length > 0
@@ -304,6 +375,48 @@ export default function ProjectionView() {
 						))}
 					</div>
 
+					<div style={styles.cashFlowSection}>
+						{cashFlowGroups.map((g) => (
+							<div key={g.key} style={styles.cashFlowGroup}>
+								{cashFlowGroups.length > 1 && (
+									<div style={styles.groupLabel}>{g.label}</div>
+								)}
+								<div style={styles.totalsRow}>
+									<div style={styles.totalCard}>
+										<span style={styles.totalLabel}>Total In</span>
+										<span
+											data-testid={`total-in-${g.key}`}
+											style={{ ...styles.totalAmount, ...styles.totalIn }}
+										>
+											{formatCurrency(g.monthly.totalIn)}/mo
+										</span>
+										<span
+											data-testid={`total-in-cumulative-${g.key}`}
+											style={styles.totalSub}
+										>
+											{formatCurrency(g.cumulative.totalIn)} over horizon
+										</span>
+									</div>
+									<div style={styles.totalCard}>
+										<span style={styles.totalLabel}>Total Out</span>
+										<span
+											data-testid={`total-out-${g.key}`}
+											style={{ ...styles.totalAmount, ...styles.totalOut }}
+										>
+											{formatCurrency(g.monthly.totalOut)}/mo
+										</span>
+										<span
+											data-testid={`total-out-cumulative-${g.key}`}
+											style={styles.totalSub}
+										>
+											{formatCurrency(g.cumulative.totalOut)} over horizon
+										</span>
+									</div>
+								</div>
+							</div>
+						))}
+					</div>
+
 					{negativeWarnings.length > 0 && (
 						<div role="alert" style={styles.warningBanner}>
 							<div style={styles.warningTitle}>
@@ -426,6 +539,55 @@ const styles = {
 		gap: "0.25rem",
 		cursor: "pointer",
 		fontSize: "0.875rem",
+	},
+	cashFlowSection: {
+		display: "flex",
+		flexWrap: "wrap" as const,
+		gap: "1.5rem",
+		marginBottom: "1rem",
+	},
+	cashFlowGroup: {
+		display: "flex",
+		flexDirection: "column" as const,
+		gap: "0.4rem",
+	},
+	groupLabel: {
+		fontSize: "0.75rem",
+		fontWeight: 600,
+		color: "#6b7280",
+		textTransform: "uppercase" as const,
+		letterSpacing: "0.05em",
+	},
+	totalsRow: {
+		display: "flex",
+		gap: "1rem",
+	},
+	totalCard: {
+		display: "flex",
+		flexDirection: "column" as const,
+		padding: "0.75rem 1rem",
+		border: "1px solid #e5e7eb",
+		borderRadius: "6px",
+		background: "#f9fafb",
+	},
+	totalLabel: {
+		fontSize: "0.75rem",
+		fontWeight: 600,
+		color: "#6b7280",
+		textTransform: "uppercase" as const,
+		letterSpacing: "0.05em",
+	},
+	totalAmount: {
+		fontSize: "1.25rem",
+		fontWeight: 600,
+		fontVariantNumeric: "tabular-nums" as const,
+	},
+	totalIn: { color: "#16a34a" },
+	totalOut: { color: "#dc2626" },
+	totalSub: {
+		fontSize: "0.75rem",
+		color: "#6b7280",
+		fontVariantNumeric: "tabular-nums" as const,
 	},
 	milestones: {
 		display: "flex",

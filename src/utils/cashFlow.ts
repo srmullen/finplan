@@ -1,3 +1,4 @@
+import { addDays, parseDate, scheduleFiresOn } from "../engine/projection";
 import type { Account, ExternalParty, Schedule } from "../engine/types";
 
 export type CashFlowDirection = "in" | "out" | "neither";
@@ -47,6 +48,23 @@ export function classifyScheduleDirection(
 	return "neither";
 }
 
+export function isFlowVisible(
+	schedule: Schedule,
+	accounts: Account[],
+	visibleAccountIds?: Set<string>,
+): boolean {
+	if (!visibleAccountIds) return true;
+
+	const sourceIsAccount = accounts.some((a) => a.id === schedule.sourceId);
+	const destIsAccount = accounts.some((a) => a.id === schedule.destinationId);
+	if (!sourceIsAccount && !destIsAccount) return true;
+
+	return (
+		(sourceIsAccount && visibleAccountIds.has(schedule.sourceId)) ||
+		(destIsAccount && visibleAccountIds.has(schedule.destinationId))
+	);
+}
+
 export function monthlyEquivalentAmount(
 	schedule: Schedule,
 	today: string,
@@ -64,12 +82,14 @@ export function computeCashFlowTotals(
 	accounts: Account[],
 	externalParties: ExternalParty[],
 	today: string,
+	visibleAccountIds?: Set<string>,
 ): CashFlowTotals {
 	let totalIn = 0;
 	let totalOut = 0;
 
 	for (const schedule of schedules) {
 		if (!isScheduleActive(schedule, today)) continue;
+		if (!isFlowVisible(schedule, accounts, visibleAccountIds)) continue;
 
 		const direction = classifyScheduleDirection(
 			schedule,
@@ -81,6 +101,41 @@ export function computeCashFlowTotals(
 		const amount = monthlyEquivalentAmount(schedule, today);
 		if (direction === "in") totalIn += amount;
 		else totalOut += amount;
+	}
+
+	return { totalIn, totalOut };
+}
+
+export function computeHorizonCashFlowTotals(
+	schedules: Schedule[],
+	accounts: Account[],
+	externalParties: ExternalParty[],
+	startDate: string,
+	endDate: string,
+	visibleAccountIds?: Set<string>,
+): CashFlowTotals {
+	let totalIn = 0;
+	let totalOut = 0;
+
+	const end = parseDate(endDate);
+	let current = parseDate(startDate);
+
+	while (current <= end) {
+		for (const schedule of schedules) {
+			if (!scheduleFiresOn(schedule, current)) continue;
+			if (!isFlowVisible(schedule, accounts, visibleAccountIds)) continue;
+
+			const direction = classifyScheduleDirection(
+				schedule,
+				accounts,
+				externalParties,
+			);
+			if (direction === "neither") continue;
+
+			if (direction === "in") totalIn += schedule.amount;
+			else totalOut += schedule.amount;
+		}
+		current = addDays(current, 1);
 	}
 
 	return { totalIn, totalOut };

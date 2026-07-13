@@ -3,6 +3,8 @@ import type { Account, ExternalParty, Schedule } from "../engine/types";
 import {
 	classifyScheduleDirection,
 	computeCashFlowTotals,
+	computeHorizonCashFlowTotals,
+	isFlowVisible,
 	monthlyEquivalentAmount,
 } from "./cashFlow";
 
@@ -244,4 +246,202 @@ it("returns zero totals for an empty schedule list", () => {
 		totalIn: 0,
 		totalOut: 0,
 	});
+});
+
+// --- isFlowVisible ---
+
+it("treats every flow as visible when no visibleAccountIds filter is given", () => {
+	expect(isFlowVisible(base, accounts)).toBe(true);
+});
+
+it("treats a flow with no Account endpoints as visible regardless of the filter", () => {
+	const partyToParty: Schedule = {
+		...base,
+		sourceId: "party-employer",
+		destinationId: "party-employer",
+	};
+	expect(
+		isFlowVisible(partyToParty, accounts, new Set(["acc-checking"])),
+	).toBe(true);
+});
+
+it("is visible when the source Account is in the visible set", () => {
+	expect(isFlowVisible(base, accounts, new Set(["acc-checking"]))).toBe(true);
+});
+
+it("is visible when the destination Account is in the visible set", () => {
+	expect(isFlowVisible(base, accounts, new Set(["acc-savings"]))).toBe(true);
+});
+
+it("is visible when only one of two Account endpoints is in the visible set", () => {
+	// mirrors AC: a visible checking account paying a hidden credit card still counts
+	const payment: Schedule = { ...base, destinationId: "acc-cc" };
+	expect(isFlowVisible(payment, accounts, new Set(["acc-checking"]))).toBe(
+		true,
+	);
+});
+
+it("is not visible when neither Account endpoint is in the visible set", () => {
+	expect(isFlowVisible(base, accounts, new Set(["acc-cc"]))).toBe(false);
+});
+
+it("is not visible when the visible set is empty", () => {
+	expect(isFlowVisible(base, accounts, new Set())).toBe(false);
+});
+
+// --- computeCashFlowTotals with visibleAccountIds ---
+
+it("excludes a flow from totals when neither endpoint is visible", () => {
+	const income: Schedule = {
+		...base,
+		sourceId: "party-employer",
+		destinationId: "acc-checking",
+	};
+	expect(
+		computeCashFlowTotals(
+			[income],
+			accounts,
+			externalParties,
+			today,
+			new Set(["acc-savings"]),
+		),
+	).toEqual({ totalIn: 0, totalOut: 0 });
+});
+
+it("includes a flow in totals when one of two endpoints is visible", () => {
+	const debtPayment: Schedule = { ...base, destinationId: "acc-cc" };
+	expect(
+		computeCashFlowTotals(
+			[debtPayment],
+			accounts,
+			externalParties,
+			today,
+			new Set(["acc-checking"]),
+		),
+	).toEqual({ totalIn: 0, totalOut: 100 });
+});
+
+// --- computeHorizonCashFlowTotals ---
+
+it("sums nominal amounts across occurrences of a monthly schedule within the horizon", () => {
+	const income: Schedule = {
+		...base,
+		sourceId: "party-employer",
+		destinationId: "acc-checking",
+		frequency: "monthly",
+		amount: 1000,
+		startDate: "2026-01-01",
+	};
+	const totals = computeHorizonCashFlowTotals(
+		[income],
+		accounts,
+		externalParties,
+		"2026-01-01",
+		"2026-03-01",
+	);
+	// fires on 2026-01-01, 2026-02-01, 2026-03-01
+	expect(totals).toEqual({ totalIn: 3000, totalOut: 0 });
+});
+
+it("excludes occurrences that fall outside the horizon window", () => {
+	const income: Schedule = {
+		...base,
+		sourceId: "party-employer",
+		destinationId: "acc-checking",
+		frequency: "monthly",
+		amount: 1000,
+		startDate: "2026-06-01",
+	};
+	const totals = computeHorizonCashFlowTotals(
+		[income],
+		accounts,
+		externalParties,
+		"2026-01-01",
+		"2026-03-01",
+	);
+	expect(totals).toEqual({ totalIn: 0, totalOut: 0 });
+});
+
+it("classifies a debt payment as Out within the horizon", () => {
+	const debtPayment: Schedule = {
+		...base,
+		destinationId: "acc-cc",
+		frequency: "monthly",
+		amount: 200,
+		startDate: "2026-01-01",
+	};
+	const totals = computeHorizonCashFlowTotals(
+		[debtPayment],
+		accounts,
+		externalParties,
+		"2026-01-01",
+		"2026-01-01",
+	);
+	expect(totals).toEqual({ totalIn: 0, totalOut: 200 });
+});
+
+it("excludes an internal transfer classified as neither", () => {
+	const internalTransfer: Schedule = {
+		...base,
+		frequency: "monthly",
+		startDate: "2026-01-01",
+	};
+	const totals = computeHorizonCashFlowTotals(
+		[internalTransfer],
+		accounts,
+		externalParties,
+		"2026-01-01",
+		"2026-01-01",
+	);
+	expect(totals).toEqual({ totalIn: 0, totalOut: 0 });
+});
+
+it("respects the visibility filter, excluding flows where neither endpoint is visible", () => {
+	const debtPayment: Schedule = {
+		...base,
+		destinationId: "acc-cc",
+		frequency: "monthly",
+		amount: 200,
+		startDate: "2026-01-01",
+	};
+	const totals = computeHorizonCashFlowTotals(
+		[debtPayment],
+		accounts,
+		externalParties,
+		"2026-01-01",
+		"2026-01-01",
+		new Set(["acc-savings"]),
+	);
+	expect(totals).toEqual({ totalIn: 0, totalOut: 0 });
+});
+
+it("counts a once schedule firing exactly on its start date within the horizon", () => {
+	const gift: Schedule = {
+		...base,
+		sourceId: "party-employer",
+		destinationId: "acc-checking",
+		frequency: "once",
+		amount: 500,
+		startDate: "2026-02-15",
+	};
+	const totals = computeHorizonCashFlowTotals(
+		[gift],
+		accounts,
+		externalParties,
+		"2026-01-01",
+		"2026-03-01",
+	);
+	expect(totals).toEqual({ totalIn: 500, totalOut: 0 });
+});
+
+it("returns zero totals for an empty schedule list over a horizon", () => {
+	expect(
+		computeHorizonCashFlowTotals(
+			[],
+			accounts,
+			externalParties,
+			"2026-01-01",
+			"2026-12-31",
+		),
+	).toEqual({ totalIn: 0, totalOut: 0 });
 });

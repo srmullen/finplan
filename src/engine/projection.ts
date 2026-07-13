@@ -7,7 +7,7 @@ import type {
 	Schedule,
 } from "./types";
 
-function parseDate(s: string): Date {
+export function parseDate(s: string): Date {
 	const [y, m, d] = s.split("-").map(Number) as [number, number, number];
 	return new Date(Date.UTC(y, m - 1, d));
 }
@@ -19,7 +19,7 @@ function formatDate(d: Date): string {
 	return `${y}-${m}-${day}`;
 }
 
-function addDays(d: Date, n: number): Date {
+export function addDays(d: Date, n: number): Date {
 	return new Date(d.getTime() + n * 86_400_000);
 }
 
@@ -32,7 +32,7 @@ function daysInMonth(year: number, month: number): number {
 	return new Date(Date.UTC(year, month, 0)).getUTCDate();
 }
 
-function scheduleFiresOn(schedule: Schedule, date: Date): boolean {
+export function scheduleFiresOn(schedule: Schedule, date: Date): boolean {
 	const start = parseDate(schedule.startDate);
 	if (date < start) return false;
 	if (schedule.endDate && date > parseDate(schedule.endDate)) return false;
@@ -81,7 +81,7 @@ function scheduleFiresOn(schedule: Schedule, date: Date): boolean {
 	}
 }
 
-function resolveSchedules(
+export function resolveSchedules(
 	baseSchedules: Schedule[],
 	scenario: Scenario | undefined,
 ): Schedule[] {
