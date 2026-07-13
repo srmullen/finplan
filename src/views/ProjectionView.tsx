@@ -194,8 +194,11 @@ export default function ProjectionView() {
 		}
 	}
 
-	const negativeWarnings: { accountId: string; accountName: string; source: string }[] =
-		[];
+	const negativeWarnings: {
+		accountId: string;
+		accountName: string;
+		source: string;
+	}[] = [];
 	for (const account of visibleAccounts) {
 		if (account.amortizing) continue;
 		if ((result[account.id] ?? []).some((p) => p.balance < 0)) {

@@ -63,15 +63,15 @@ export default function DocsView() {
 					Milestones like an account being paid off appear right on the chart.
 				</DocsBlock>
 				<DocsBlock label="Negative balance warning">
-					A banner appears above the chart listing any visible revolving
-					account (checking, savings, credit card — not a loan) whose Baseline
-					or an active Scenario dips below zero within the selected horizon.
-					Each entry names the account and which line is affected — "Baseline"
-					or the scenario's name — so a Scenario-only warning doesn't get
-					mistaken for a real Baseline problem. Hiding an account or shrinking
-					the horizon removes it from the banner once it's no longer projected
-					to go negative. Loans never trigger this warning, since paying down
-					to zero is expected.
+					A banner appears above the chart listing any visible revolving account
+					(checking, savings, credit card — not a loan) whose Baseline or an
+					active Scenario dips below zero within the selected horizon. Each
+					entry names the account and which line is affected — "Baseline" or the
+					scenario's name — so a Scenario-only warning doesn't get mistaken for
+					a real Baseline problem. Hiding an account or shrinking the horizon
+					removes it from the banner once it's no longer projected to go
+					negative. Loans never trigger this warning, since paying down to zero
+					is expected.
 				</DocsBlock>
 			</section>
 
