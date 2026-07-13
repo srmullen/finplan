@@ -140,8 +140,7 @@ export default function SchedulesView() {
 						data-testid="total-in"
 						style={{ ...styles.totalAmount, ...styles.totalIn }}
 					>
-						$
-						{totalIn.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+						${totalIn.toLocaleString(undefined, { maximumFractionDigits: 0 })}
 						/mo
 					</span>
 				</div>
@@ -151,8 +150,7 @@ export default function SchedulesView() {
 						data-testid="total-out"
 						style={{ ...styles.totalAmount, ...styles.totalOut }}
 					>
-						$
-						{totalOut.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+						${totalOut.toLocaleString(undefined, { maximumFractionDigits: 0 })}
 						/mo
 					</span>
 				</div>
