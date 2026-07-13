@@ -122,6 +122,19 @@ export default function DocsView() {
 					use "+ Add payment group" to bundle those schedules under one named
 					group so they display and can be edited or deleted together.
 				</DocsBlock>
+				<DocsBlock label="Total In / Total Out">
+					Total In is the monthly-equivalent sum of every active schedule coming
+					from an external party (paychecks, gifts, refunds). Total Out is the
+					monthly-equivalent sum of every active schedule going to an external
+					party, or to a loan or credit card account — a credit card payment
+					counts as Out even though it comes from another account of yours,
+					since paying down debt is money leaving the household. Transfers
+					between two of your own non-debt accounts count toward neither total.
+					Each schedule's amount is normalized to a monthly-equivalent figure
+					based on its frequency before summing, only currently-active schedules
+					are included, and a one-time schedule only counts in the month it's
+					scheduled for.
+				</DocsBlock>
 			</section>
 		</div>
 	);
