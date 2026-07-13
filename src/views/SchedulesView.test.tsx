@@ -296,6 +296,71 @@ describe("SchedulesView — with schedules", () => {
 	});
 });
 
+describe("SchedulesView — Total In/Out", () => {
+	const income: Schedule = {
+		id: "s-income",
+		sourceId: "party-1",
+		destinationId: "acc-1",
+		amount: 3000,
+		estimated: false,
+		frequency: "monthly",
+		startDate: "2020-01-01",
+		terminateAtZero: false,
+	};
+	const creditCardAccount: Account = {
+		...account,
+		id: "acc-cc",
+		type: "credit_card",
+	};
+	const debtPayment: Schedule = {
+		id: "s-debt",
+		sourceId: "acc-1",
+		destinationId: "acc-cc",
+		amount: 200,
+		estimated: false,
+		frequency: "monthly",
+		startDate: "2020-01-01",
+		terminateAtZero: false,
+	};
+	const internalTransfer: Schedule = {
+		id: "s-internal",
+		sourceId: "acc-1",
+		destinationId: "acc-cc",
+		amount: 999,
+		estimated: false,
+		frequency: "monthly",
+		startDate: "2099-01-01", // not yet active
+		terminateAtZero: false,
+	};
+
+	it("shows $0/mo for both totals when there are no schedules", () => {
+		render(<SchedulesView />);
+		expect(screen.getByTestId("total-in").textContent).toBe("$0/mo");
+		expect(screen.getByTestId("total-out").textContent).toBe("$0/mo");
+	});
+
+	it("sums an ExternalParty-sourced schedule into Total In", () => {
+		setupMocks([income], [account], [party]);
+		render(<SchedulesView />);
+		expect(screen.getByTestId("total-in").textContent).toBe("$3,000/mo");
+		expect(screen.getByTestId("total-out").textContent).toBe("$0/mo");
+	});
+
+	it("sums a credit_card-destined schedule into Total Out", () => {
+		setupMocks([debtPayment], [account, creditCardAccount], [party]);
+		render(<SchedulesView />);
+		expect(screen.getByTestId("total-in").textContent).toBe("$0/mo");
+		expect(screen.getByTestId("total-out").textContent).toBe("$200/mo");
+	});
+
+	it("excludes a schedule that has not started yet from both totals", () => {
+		setupMocks([internalTransfer], [account, creditCardAccount], [party]);
+		render(<SchedulesView />);
+		expect(screen.getByTestId("total-in").textContent).toBe("$0/mo");
+		expect(screen.getByTestId("total-out").textContent).toBe("$0/mo");
+	});
+});
+
 describe("SchedulesView — Payment Groups", () => {
 	const group: ScheduleGroup = { id: "g-1", name: "Mortgage" };
 	const memberA: Schedule = {

@@ -6,6 +6,7 @@ import { useAccounts } from "../hooks/useAccounts";
 import { useExternalParties } from "../hooks/useExternalParties";
 import { useScheduleGroups } from "../hooks/useScheduleGroups";
 import { useSchedules } from "../hooks/useSchedules";
+import { computeCashFlowTotals } from "../utils/cashFlow";
 import { formatDate } from "../utils/formatDate";
 
 export default function SchedulesView() {
@@ -72,6 +73,14 @@ export default function SchedulesView() {
 
 	const noNodes = accounts.length + externalParties.length < 2;
 
+	const today = new Date().toISOString().slice(0, 10);
+	const { totalIn, totalOut } = computeCashFlowTotals(
+		schedules,
+		accounts,
+		externalParties,
+		today,
+	);
+
 	const groups = scheduleGroups
 		.map((group) => ({
 			group,
@@ -123,6 +132,31 @@ export default function SchedulesView() {
 	return (
 		<div>
 			<h1>Schedules</h1>
+
+			<div style={styles.totalsRow}>
+				<div style={styles.totalCard}>
+					<span style={styles.totalLabel}>Total In</span>
+					<span
+						data-testid="total-in"
+						style={{ ...styles.totalAmount, ...styles.totalIn }}
+					>
+						$
+						{totalIn.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+						/mo
+					</span>
+				</div>
+				<div style={styles.totalCard}>
+					<span style={styles.totalLabel}>Total Out</span>
+					<span
+						data-testid="total-out"
+						style={{ ...styles.totalAmount, ...styles.totalOut }}
+					>
+						$
+						{totalOut.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+						/mo
+					</span>
+				</div>
+			</div>
 
 			{(showForm || editing) && (
 				<ScheduleForm
@@ -244,6 +278,33 @@ export default function SchedulesView() {
 }
 
 const styles = {
+	totalsRow: {
+		display: "flex",
+		gap: "1rem",
+		marginBottom: "1.5rem",
+	},
+	totalCard: {
+		display: "flex",
+		flexDirection: "column" as const,
+		padding: "0.75rem 1rem",
+		border: "1px solid #e5e7eb",
+		borderRadius: "6px",
+		background: "#f9fafb",
+	},
+	totalLabel: {
+		fontSize: "0.75rem",
+		fontWeight: 600,
+		color: "#6b7280",
+		textTransform: "uppercase" as const,
+		letterSpacing: "0.05em",
+	},
+	totalAmount: {
+		fontSize: "1.25rem",
+		fontWeight: 600,
+		fontVariantNumeric: "tabular-nums" as const,
+	},
+	totalIn: { color: "#16a34a" },
+	totalOut: { color: "#dc2626" },
 	addBtnRow: {
 		display: "flex",
 		gap: "0.5rem",
