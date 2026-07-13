@@ -21,3 +21,6 @@ docker login ghcr.io -u <github-username>
 - Try ponytail
 - Integration Tests required.
 - Script for populating database
+- Warning/Error on projection page if any non-amortizing accounts hit zero. Warning on individual account page as well.
+- Sorting/filtering on tables. Default sort on 'type' column.
+- Should be able to see total in/out. Maybe on Schedules and projection pages.

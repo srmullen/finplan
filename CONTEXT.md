@@ -50,6 +50,16 @@ _Avoid_: Transaction, payment, movement
 A rule that generates one or more Transfers between two nodes. Defined by an amount, frequency, source node, destination node, start date, and an optional termination condition (end date or balance threshold). Covers both recurring flows and planned one-time events. Supported frequencies: once, weekly, biweekly, semi-monthly, monthly, quarterly, annually.
 _Avoid_: RecurringTransfer, recurring payment, rule
 
+### Cash flow
+
+**Total In**:
+The sum of Schedule amounts whose source is an ExternalParty — money entering the household's tracked Accounts from outside.
+_Avoid_: Income, inflow
+
+**Total Out**:
+The sum of Schedule amounts whose destination is an ExternalParty, or whose destination Account is a loan or credit_card Account — regardless of the source. Money moving between two other Accounts counts as neither Total In nor Total Out.
+_Avoid_: Expenses, outflow, spending
+
 ### Simulation
 
 **Baseline**:
