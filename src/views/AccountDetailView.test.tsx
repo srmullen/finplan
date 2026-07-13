@@ -403,6 +403,45 @@ describe("AccountDetailView — header balance", () => {
 	});
 });
 
+describe("AccountDetailView — negative balance warning", () => {
+	it("shows a warning when a revolving account's projection goes negative", async () => {
+		vi.mocked(get).mockResolvedValue({
+			"acc-1": [
+				{ date: "2024-01-01", balance: 500 },
+				{ date: "2024-02-01", balance: -200 },
+			],
+		});
+		renderAt("acc-1");
+		await act(async () => {});
+		expect(screen.getByRole("alert")).toBeTruthy();
+	});
+
+	it("shows no warning when a revolving account's projection stays non-negative", async () => {
+		vi.mocked(get).mockResolvedValue({
+			"acc-1": [
+				{ date: "2024-01-01", balance: 500 },
+				{ date: "2024-02-01", balance: 0 },
+			],
+		});
+		renderAt("acc-1");
+		await act(async () => {});
+		expect(screen.queryByRole("alert")).toBeNull();
+	});
+
+	it("never shows the warning for an amortizing account, even with a negative raw balance", async () => {
+		setupMocks([{ ...account, amortizing: true }]);
+		vi.mocked(get).mockResolvedValue({
+			"acc-1": [
+				{ date: "2024-01-01", balance: -20000 },
+				{ date: "2024-02-01", balance: -19000 },
+			],
+		});
+		renderAt("acc-1");
+		await act(async () => {});
+		expect(screen.queryByRole("alert")).toBeNull();
+	});
+});
+
 describe("AccountDetailView — stale fetch guard", () => {
 	it("discards stale projection result when effect re-runs before first fetch completes", async () => {
 		let resolveFirst!: (v: ProjectionResult) => void;

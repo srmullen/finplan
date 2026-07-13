@@ -30,4 +30,9 @@ describe("DocsView", () => {
 		expect(nav.querySelector('a[href="#accounts"]')).toBeTruthy();
 		expect(nav.querySelector('a[href="#schedules"]')).toBeTruthy();
 	});
+
+	it("documents the negative balance warning under Accounts", () => {
+		render(<DocsView />);
+		expect(screen.getByText("Negative balance warning")).toBeTruthy();
+	});
 });

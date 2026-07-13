@@ -82,6 +82,13 @@ export default function DocsView() {
 					specific date — so future projections start from reality instead of
 					drifting from what was planned.
 				</DocsBlock>
+				<DocsBlock label="Negative balance warning">
+					On an account's detail page, a revolving account (checking, savings,
+					credit card — anything that doesn't pay down to zero) shows a warning
+					if its own 12-month projection dips below zero at any point.
+					Amortizing accounts (loans) never show this warning, since reaching
+					zero is their expected payoff.
+				</DocsBlock>
 			</section>
 
 			<hr style={styles.divider} />
