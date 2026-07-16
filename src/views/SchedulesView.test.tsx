@@ -296,6 +296,75 @@ describe("SchedulesView — with schedules", () => {
 	});
 });
 
+describe("SchedulesView — row cash flow stripe", () => {
+	const creditCardAccount: Account = {
+		...account,
+		id: "acc-cc",
+		type: "credit_card",
+	};
+	const inSchedule: Schedule = {
+		...schedule,
+		id: "s-in",
+		sourceId: "party-1",
+		destinationId: "acc-1",
+	};
+	const outSchedule: Schedule = {
+		...schedule,
+		id: "s-out",
+		sourceId: "acc-1",
+		destinationId: "acc-cc",
+	};
+	const neitherSchedule: Schedule = {
+		...schedule,
+		id: "s-neither",
+		sourceId: "acc-1",
+		destinationId: "acc-1",
+	};
+
+	it("shows a green left-border stripe on a row classified as in", () => {
+		setupMocks([inSchedule], [account], [party]);
+		render(<SchedulesView />);
+		const row = screen.getByText("$3,000 ~").closest("tr") as HTMLTableRowElement;
+		expect(row.style.borderLeft).toBe("4px solid rgb(22, 163, 74)");
+	});
+
+	it("shows a red left-border stripe on a row classified as out", () => {
+		setupMocks([outSchedule], [account, creditCardAccount], [party]);
+		render(<SchedulesView />);
+		const row = screen.getByText("$3,000 ~").closest("tr") as HTMLTableRowElement;
+		expect(row.style.borderLeft).toBe("4px solid rgb(220, 38, 38)");
+	});
+
+	it("shows no stripe on a row classified as neither", () => {
+		setupMocks([neitherSchedule], [account], [party]);
+		render(<SchedulesView />);
+		const row = screen.getByText("$3,000 ~").closest("tr") as HTMLTableRowElement;
+		expect(row.style.borderLeft).toBe("");
+	});
+
+	it("stripes payment group member rows individually without striping the group header", () => {
+		const group: ScheduleGroup = { id: "g-1", name: "Mortgage" };
+		const memberIn: Schedule = { ...inSchedule, id: "s-member-in", groupId: "g-1" };
+		const memberOut: Schedule = {
+			...outSchedule,
+			id: "s-member-out",
+			groupId: "g-1",
+		};
+		setupMocks(
+			[memberIn, memberOut],
+			[account, creditCardAccount],
+			[party],
+			[group],
+		);
+		render(<SchedulesView />);
+		const headerRow = screen.getByText("Mortgage").closest("tr")!;
+		expect(headerRow.style.borderLeft).toBe("");
+		const rows = screen.getAllByText("$3,000 ~").map((el) => el.closest("tr")!);
+		expect(rows[0].style.borderLeft).toBe("4px solid rgb(22, 163, 74)");
+		expect(rows[1].style.borderLeft).toBe("4px solid rgb(220, 38, 38)");
+	});
+});
+
 describe("SchedulesView — Total In/Out", () => {
 	const income: Schedule = {
 		id: "s-income",
