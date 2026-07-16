@@ -39,7 +39,7 @@ _Avoid_: Open-end account
 ### Edges
 
 **Payment Group**:
-A named collection of Schedules that together represent a single real-world payment outflow from one source account. Used when a payment fans out to multiple destinations (e.g., a mortgage payment split between the loan account and an escrow servicer). All member Schedules must share the same source account. Displayed in the UI as a group header followed by its member Schedules. Deleting a Payment Group deletes all its members. Called `ScheduleGroup` in code.
+A named collection of Schedules that together represent a single real-world payment outflow from one source account. Used when a payment fans out to multiple destinations (e.g., a mortgage payment split between the loan account and an escrow servicer). All member Schedules must share the same source account. Displayed in the UI as a group header followed by its member Schedules. Deleting a Payment Group deletes all its members. Editing a member Schedule individually preserves its group membership and treats its source account as fixed/inherited from the group, rather than detaching it (see ADR 0021). Called `ScheduleGroup` in code.
 _Avoid_: Split payment, compound schedule, payment bundle
 
 **Transfer**:
@@ -53,12 +53,16 @@ _Avoid_: RecurringTransfer, recurring payment, rule
 ### Cash flow
 
 **Total In**:
-The sum of Schedule amounts whose source is an ExternalParty — money entering the household's tracked Accounts from outside.
+The sum of Schedule amounts whose source is an ExternalParty — money entering the household's tracked Accounts from outside. Each Schedule contributes its full monthly-equivalent amount (see Monthly-Equivalent Amount) for the current calendar month if it fires at least once during that month, or $0 otherwise — never a prorated partial amount.
 _Avoid_: Income, inflow
 
 **Total Out**:
-The sum of Schedule amounts whose destination is an ExternalParty, or whose destination Account is a loan or credit_card Account — regardless of the source. Money moving between two other Accounts counts as neither Total In nor Total Out.
+The sum of Schedule amounts whose destination is an ExternalParty, or whose destination Account is a loan or credit_card Account — regardless of the source. Money moving between two other Accounts counts as neither Total In nor Total Out. Eligibility for the current month follows the same fires-at-least-once rule as Total In (see ADR 0020).
 _Avoid_: Expenses, outflow, spending
+
+**Monthly-Equivalent Amount**:
+A Schedule's amount normalized to a smoothed monthly rate for display in Total In/Total Out (e.g., a weekly Schedule's amount × 52/12). Used only for the current-month snapshot totals, not for Projections or the cumulative horizon total, both of which replay actual per-occurrence Transfers instead.
+_Avoid_: Monthly average, run rate
 
 ### Simulation
 
