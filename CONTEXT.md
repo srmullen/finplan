@@ -53,11 +53,11 @@ _Avoid_: RecurringTransfer, recurring payment, rule
 ### Cash flow
 
 **Total In**:
-The sum of Schedule amounts whose source is an ExternalParty — money entering the household's tracked Accounts from outside. Each Schedule contributes its full monthly-equivalent amount (see Monthly-Equivalent Amount) for the current calendar month if it fires at least once during that month, or $0 otherwise — never a prorated partial amount.
+The sum of Schedule amounts whose source is an ExternalParty — money entering the household's tracked Accounts from outside. Each Schedule contributes its full monthly-equivalent amount (see Monthly-Equivalent Amount) for the current calendar month once it has started (by month-end) and until it ends. A Schedule that started before or during this month, and has no end date or doesn't end until after this month, always counts in full — this is what keeps quarterly/annual Schedules smoothed every month rather than only in the month they actually fire. A Schedule ending partway through the current month counts only if it fires at least once between the start of its activity this month and its end date; otherwise it's excluded for that final month. Never prorated.
 _Avoid_: Income, inflow
 
 **Total Out**:
-The sum of Schedule amounts whose destination is an ExternalParty, or whose destination Account is a loan or credit_card Account — regardless of the source. Money moving between two other Accounts counts as neither Total In nor Total Out. Eligibility for the current month follows the same fires-at-least-once rule as Total In (see ADR 0020).
+The sum of Schedule amounts whose destination is an ExternalParty, or whose destination Account is a loan or credit_card Account — regardless of the source. Money moving between two other Accounts counts as neither Total In nor Total Out. Eligibility for the current month follows the same started/ending rule as Total In (see ADR 0020).
 _Avoid_: Expenses, outflow, spending
 
 **Monthly-Equivalent Amount**:

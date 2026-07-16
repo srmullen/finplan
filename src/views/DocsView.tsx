@@ -144,9 +144,13 @@ export default function DocsView() {
 					since paying down debt is money leaving the household. Transfers
 					between two of your own non-debt accounts count toward neither total.
 					Each schedule's amount is normalized to a monthly-equivalent figure
-					based on its frequency before summing, only currently-active schedules
-					are included, and a one-time schedule only counts in the month it's
-					scheduled for.
+					based on its frequency before summing. A schedule counts for the
+					current month as soon as its start date falls anywhere in that month —
+					you don't have to wait for the exact day to arrive. Once started, it
+					keeps counting every month (even ones like an annual premium that only
+					technically charges once a year) unless it ends partway through the
+					current month without firing again before its end date. A one-time
+					schedule only counts in the month it's scheduled for.
 				</DocsBlock>
 			</section>
 		</div>
