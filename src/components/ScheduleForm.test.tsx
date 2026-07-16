@@ -367,4 +367,82 @@ describe("ScheduleForm — edit mode", () => {
 		);
 		expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ id: "s-1" }));
 	});
+
+	it("does not add a groupId when editing a schedule without one", () => {
+		render(
+			<ScheduleForm
+				initial={existingSchedule}
+				accounts={accounts}
+				externalParties={parties}
+				onSave={onSave}
+				onCancel={onCancel}
+			/>,
+		);
+		fireEvent.submit(
+			screen.getByRole("button", { name: "Save changes" }).closest("form")!,
+		);
+		const saved = onSave.mock.calls.at(-1)?.[0] as Schedule;
+		expect(saved.groupId).toBeUndefined();
+	});
+
+	it("leaves the source select enabled when editing a schedule without a groupId", () => {
+		render(
+			<ScheduleForm
+				initial={existingSchedule}
+				accounts={accounts}
+				externalParties={parties}
+				onSave={onSave}
+				onCancel={onCancel}
+			/>,
+		);
+		expect(
+			(screen.getByLabelText("From") as HTMLSelectElement).disabled,
+		).toBe(false);
+	});
+});
+
+describe("ScheduleForm — editing a payment group member", () => {
+	const groupedSchedule: Schedule = {
+		...existingSchedule,
+		id: "s-2",
+		groupId: "group-1",
+	};
+
+	it("preserves the existing groupId on submit", () => {
+		render(
+			<ScheduleForm
+				initial={groupedSchedule}
+				accounts={accounts}
+				externalParties={parties}
+				onSave={onSave}
+				onCancel={onCancel}
+			/>,
+		);
+		fireEvent.submit(
+			screen.getByRole("button", { name: "Save changes" }).closest("form")!,
+		);
+		expect(onSave).toHaveBeenCalledWith(
+			expect.objectContaining({ groupId: "group-1" }),
+		);
+	});
+
+	it("disables the source select and shows an inherited-source hint", () => {
+		render(
+			<ScheduleForm
+				initial={groupedSchedule}
+				accounts={accounts}
+				externalParties={parties}
+				onSave={onSave}
+				onCancel={onCancel}
+			/>,
+		);
+		expect(
+			(screen.getByLabelText("From") as HTMLSelectElement).disabled,
+		).toBe(true);
+		expect(
+			screen.getByText(
+				"Inherited from the payment group and can't be changed here.",
+			),
+		).toBeTruthy();
+	});
 });

@@ -50,6 +50,7 @@ export default function ScheduleForm({
 	];
 
 	const firstNodeId = allNodes[0]?.id ?? "";
+	const sourceLocked = Boolean(initial?.groupId);
 
 	const [sourceId, setSourceId] = useState(
 		initial?.sourceId ?? defaultSourceId ?? firstNodeId,
@@ -82,6 +83,7 @@ export default function ScheduleForm({
 			frequency,
 			startDate,
 			...(endDate ? { endDate } : {}),
+			...(initial?.groupId ? { groupId: initial.groupId } : {}),
 			terminateAtZero: destIsAmortizing && terminateAtZero,
 		};
 		onSave(schedule);
@@ -95,6 +97,7 @@ export default function ScheduleForm({
 					<select
 						id="sched-source"
 						value={sourceId}
+						disabled={sourceLocked}
 						onChange={(e) => setSourceId(e.target.value)}
 					>
 						{allNodes.map((n) => (
@@ -103,6 +106,11 @@ export default function ScheduleForm({
 							</option>
 						))}
 					</select>
+					{sourceLocked && (
+						<span style={styles.hint}>
+							Inherited from the payment group and can't be changed here.
+						</span>
+					)}
 				</div>
 
 				<div style={styles.field}>
@@ -232,6 +240,10 @@ const styles = {
 		gap: "0.5rem",
 		cursor: "pointer",
 		flex: 1,
+	},
+	hint: {
+		fontSize: "0.75rem",
+		color: "#6b7280",
 	},
 	actions: { display: "flex", gap: "0.5rem", justifyContent: "flex-end" },
 	cancelBtn: {
