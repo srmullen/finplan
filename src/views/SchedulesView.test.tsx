@@ -465,4 +465,31 @@ describe("SchedulesView — Payment Groups", () => {
 		});
 		expect(screen.queryByLabelText("Group name")).toBeNull();
 	});
+
+	it("opens the standalone ScheduleForm with a locked source when a member row's Edit is clicked", () => {
+		const grouped: Schedule = { ...memberA, groupId: "g-1" };
+		setupMocks([grouped], [account], [party], [group]);
+		render(<SchedulesView />);
+		// index 0 is the group header's Edit button; index 1 is the member row's
+		fireEvent.click(screen.getAllByRole("button", { name: "Edit" })[1]);
+		expect(screen.getByRole("button", { name: "Save changes" })).toBeTruthy();
+		expect(
+			(screen.getByLabelText("From") as HTMLSelectElement).disabled,
+		).toBe(true);
+	});
+
+	it("preserves groupId when a member is saved via the standalone row-level ScheduleForm", async () => {
+		const grouped: Schedule = { ...memberA, groupId: "g-1" };
+		setupMocks([grouped], [account], [party], [group]);
+		render(<SchedulesView />);
+		fireEvent.click(screen.getAllByRole("button", { name: "Edit" })[1]);
+		await act(async () => {
+			fireEvent.submit(
+				screen.getByRole("button", { name: "Save changes" }).closest("form")!,
+			);
+		});
+		expect(mockUpdateSchedule).toHaveBeenCalledWith(
+			expect.objectContaining({ groupId: "g-1" }),
+		);
+	});
 });

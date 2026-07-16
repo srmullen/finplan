@@ -133,7 +133,11 @@ export default function DocsView() {
 					single real-world payment actually splits across multiple destinations
 					— for example a mortgage payment that also funds an escrow account —
 					use "+ Add payment group" to bundle those schedules under one named
-					group so they display and can be edited or deleted together.
+					group so they display and can be edited or deleted together. You can
+					still use a member's own row-level "Edit" button to tweak just that
+					member's amount, frequency, destination, or dates — doing so keeps it
+					in the group, and its source account field is locked since every
+					member of a group shares the same source.
 				</DocsBlock>
 				<DocsBlock label="Total In / Total Out">
 					Total In is the monthly-equivalent sum of every active schedule coming
