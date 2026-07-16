@@ -6,7 +6,10 @@ import { useAccounts } from "../hooks/useAccounts";
 import { useExternalParties } from "../hooks/useExternalParties";
 import { useScheduleGroups } from "../hooks/useScheduleGroups";
 import { useSchedules } from "../hooks/useSchedules";
-import { computeCashFlowTotals } from "../utils/cashFlow";
+import {
+	classifyScheduleDirection,
+	computeCashFlowTotals,
+} from "../utils/cashFlow";
 import { formatDate } from "../utils/formatDate";
 
 export default function SchedulesView() {
@@ -92,42 +95,51 @@ export default function SchedulesView() {
 	);
 	const ungroupedSchedules = schedules.filter((s) => !groupedIds.has(s.id));
 
-	const renderScheduleRow = (s: Schedule, indented: boolean) => (
-		<tr key={s.id}>
-			<td style={indented ? styles.indentedCell : undefined}>
-				{nodeLabel(s.sourceId)}
-			</td>
-			<td style={{ fontVariantNumeric: "tabular-nums" }}>
-				${s.amount.toLocaleString()}
-				{s.estimated ? " ~" : ""}
-			</td>
-			<td>{s.frequency}</td>
-			<td>{nodeLabel(s.destinationId)}</td>
-			<td>{formatDate(s.startDate)}</td>
-			<td>{s.endDate ? formatDate(s.endDate) : "—"}</td>
-			<td style={styles.actions}>
-				<button
-					type="button"
-					style={styles.editBtn}
-					onClick={() => {
-						setShowForm(false);
-						setShowGroupForm(false);
-						setEditingGroup(null);
-						setEditing(s);
-					}}
-				>
-					Edit
-				</button>
-				<button
-					type="button"
-					style={styles.deleteBtn}
-					onClick={() => handleDeleteSchedule(s.id)}
-				>
-					Delete
-				</button>
-			</td>
-		</tr>
-	);
+	const renderScheduleRow = (s: Schedule, indented: boolean) => {
+		const direction = classifyScheduleDirection(s, accounts, externalParties);
+		const stripeStyle =
+			direction === "in"
+				? styles.stripeIn
+				: direction === "out"
+					? styles.stripeOut
+					: undefined;
+		return (
+			<tr key={s.id} style={stripeStyle}>
+				<td style={indented ? styles.indentedCell : undefined}>
+					{nodeLabel(s.sourceId)}
+				</td>
+				<td style={{ fontVariantNumeric: "tabular-nums" }}>
+					${s.amount.toLocaleString()}
+					{s.estimated ? " ~" : ""}
+				</td>
+				<td>{s.frequency}</td>
+				<td>{nodeLabel(s.destinationId)}</td>
+				<td>{formatDate(s.startDate)}</td>
+				<td>{s.endDate ? formatDate(s.endDate) : "—"}</td>
+				<td style={styles.actions}>
+					<button
+						type="button"
+						style={styles.editBtn}
+						onClick={() => {
+							setShowForm(false);
+							setShowGroupForm(false);
+							setEditingGroup(null);
+							setEditing(s);
+						}}
+					>
+						Edit
+					</button>
+					<button
+						type="button"
+						style={styles.deleteBtn}
+						onClick={() => handleDeleteSchedule(s.id)}
+					>
+						Delete
+					</button>
+				</td>
+			</tr>
+		);
+	};
 
 	return (
 		<div>
@@ -347,4 +359,6 @@ const styles = {
 		color: "#374151",
 	},
 	indentedCell: { paddingLeft: "1.5rem" },
+	stripeIn: { borderLeft: "4px solid #16a34a" },
+	stripeOut: { borderLeft: "4px solid #dc2626" },
 };
