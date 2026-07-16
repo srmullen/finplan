@@ -20,10 +20,33 @@ const MONTHLY_MULTIPLIER: Record<
 	annually: 1 / 12,
 };
 
-function isScheduleActive(schedule: Schedule, today: string): boolean {
-	if (schedule.startDate > today) return false;
-	if (schedule.endDate && schedule.endDate < today) return false;
-	return true;
+function monthBounds(today: string): { monthStart: Date; monthEnd: Date } {
+	const [year, month] = today.split("-").map(Number) as [number, number];
+	return {
+		monthStart: new Date(Date.UTC(year, month - 1, 1)),
+		monthEnd: new Date(Date.UTC(year, month, 0)),
+	};
+}
+
+function isActiveThisMonth(schedule: Schedule, today: string): boolean {
+	const { monthStart, monthEnd } = monthBounds(today);
+	const start = parseDate(schedule.startDate);
+	if (start > monthEnd) return false;
+
+	if (!schedule.endDate) return true;
+
+	const end = parseDate(schedule.endDate);
+	if (end < monthStart) return false;
+	if (end > monthEnd) return true;
+
+	// Ends partway through this month: only counts if it actually fires at
+	// least once between the start of its activity this month and its end date.
+	let d = start > monthStart ? start : monthStart;
+	while (d <= end) {
+		if (scheduleFiresOn(schedule, d)) return true;
+		d = addDays(d, 1);
+	}
+	return false;
 }
 
 export function classifyScheduleDirection(
@@ -88,7 +111,7 @@ export function computeCashFlowTotals(
 	let totalOut = 0;
 
 	for (const schedule of schedules) {
-		if (!isScheduleActive(schedule, today)) continue;
+		if (!isActiveThisMonth(schedule, today)) continue;
 		if (!isFlowVisible(schedule, accounts, visibleAccountIds)) continue;
 
 		const direction = classifyScheduleDirection(

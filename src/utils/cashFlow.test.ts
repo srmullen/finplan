@@ -153,9 +153,9 @@ it("excludes a once schedule whose start date falls outside the current calendar
 	).toBe(0);
 });
 
-it("excludes a once schedule later in the current month that hasn't started yet, since it hasn't started", () => {
-	// The general active-schedule filter (startDate <= today) applies even to
-	// `once` schedules, on top of the current-calendar-month check.
+it("includes a once schedule later in the current month, even though it hasn't started yet", () => {
+	// Per ADR-0020: a schedule belongs to a month once its start date falls
+	// within it, regardless of whether that exact day has passed yet.
 	const notYetStarted: Schedule = {
 		...base,
 		sourceId: "party-employer",
@@ -171,7 +171,7 @@ it("excludes a once schedule later in the current month that hasn't started yet,
 			externalParties,
 			today,
 		),
-	).toEqual({ totalIn: 0, totalOut: 0 });
+	).toEqual({ totalIn: 500, totalOut: 0 });
 });
 
 // --- computeCashFlowTotals ---
@@ -246,6 +246,103 @@ it("returns zero totals for an empty schedule list", () => {
 		totalIn: 0,
 		totalOut: 0,
 	});
+});
+
+// --- ADR-0020: month-level start/end eligibility ---
+
+it("includes a schedule whose start date falls later in the current month", () => {
+	const income: Schedule = {
+		...base,
+		sourceId: "party-employer",
+		destinationId: "acc-checking",
+		frequency: "monthly",
+		startDate: "2026-07-28",
+		amount: 500,
+	};
+	expect(
+		computeCashFlowTotals([income], accounts, externalParties, today),
+	).toEqual({ totalIn: 500, totalOut: 0 });
+});
+
+it("includes a schedule ending partway through the current month if it already fired before ending", () => {
+	const income: Schedule = {
+		...base,
+		sourceId: "party-employer",
+		destinationId: "acc-checking",
+		frequency: "monthly",
+		startDate: "2024-01-01",
+		endDate: "2026-07-05",
+		amount: 300,
+	};
+	// fires on the 1st of every month, including 2026-07-01, before the 07-05 end date
+	expect(
+		computeCashFlowTotals([income], accounts, externalParties, today),
+	).toEqual({ totalIn: 300, totalOut: 0 });
+});
+
+it("excludes a schedule ending partway through the current month if it never fires before ending", () => {
+	const income: Schedule = {
+		...base,
+		sourceId: "party-employer",
+		destinationId: "acc-checking",
+		frequency: "monthly",
+		startDate: "2024-01-20",
+		endDate: "2026-07-03",
+		amount: 300,
+	};
+	// fires on the 20th of every month; ends 07-03, before its next July occurrence
+	expect(
+		computeCashFlowTotals([income], accounts, externalParties, today),
+	).toEqual({ totalIn: 0, totalOut: 0 });
+});
+
+it("excludes a schedule ending on the last day of the current month if it never fires before ending", () => {
+	// Boundary case: endDate on the month's last day is still "ending this
+	// month," so the firing check must apply rather than short-circuiting.
+	const quarterly: Schedule = {
+		...base,
+		sourceId: "party-employer",
+		destinationId: "acc-checking",
+		frequency: "quarterly",
+		startDate: "2020-02-01", // fires Feb/May/Aug/Nov
+		endDate: "2026-07-31",
+		amount: 300,
+	};
+	expect(
+		computeCashFlowTotals([quarterly], accounts, externalParties, today),
+	).toEqual({ totalIn: 0, totalOut: 0 });
+});
+
+it("includes a schedule that both starts and ends within the current month, if it fires in between", () => {
+	const income: Schedule = {
+		...base,
+		sourceId: "party-employer",
+		destinationId: "acc-checking",
+		frequency: "once",
+		startDate: "2026-07-10",
+		endDate: "2026-07-20",
+		amount: 400,
+	};
+	expect(
+		computeCashFlowTotals([income], accounts, externalParties, today),
+	).toEqual({ totalIn: 400, totalOut: 0 });
+});
+
+it("keeps an ongoing annual schedule smoothed every month, not just the month it fires", () => {
+	// Regression guard: an annual schedule only fires in one specific month
+	// (here, March), but with no imminent start/end this month, it must still
+	// count at its smoothed monthly-equivalent every other month too.
+	const insurance: Schedule = {
+		...base,
+		sourceId: "acc-checking",
+		destinationId: "party-employer",
+		frequency: "annually",
+		startDate: "2020-03-15",
+		amount: 1200,
+	};
+	expect(
+		computeCashFlowTotals([insurance], accounts, externalParties, today),
+	).toEqual({ totalIn: 0, totalOut: 100 });
 });
 
 // --- isFlowVisible ---
