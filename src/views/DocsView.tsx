@@ -179,11 +179,11 @@ export default function DocsView() {
 				<DocsBlock label="Row color stripe">
 					Each schedule row shows a colored stripe along its left edge using the
 					same green/red convention as Total In/Total Out above: green if that
-					row counts toward Total In, red if it counts toward Total Out, and no
-					stripe if it's a transfer between two of your own accounts that counts
-					toward neither. In a Payment Group, each member row is striped
-					individually based on its own destination — the group's header row is
-					never striped.
+					row counts toward Total In, red if it counts toward Total Out, and
+					blue if it's an internal transfer between two of your own accounts
+					that counts toward neither. In a Payment Group, each member row is
+					striped individually based on its own destination — the group's header
+					row is never striped.
 				</DocsBlock>
 			</section>
 		</div>

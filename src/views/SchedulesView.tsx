@@ -102,7 +102,7 @@ export default function SchedulesView() {
 				? styles.stripeIn
 				: direction === "out"
 					? styles.stripeOut
-					: undefined;
+					: styles.stripeNeither;
 		return (
 			<tr key={s.id} style={stripeStyle}>
 				<td style={indented ? styles.indentedCell : undefined}>
@@ -361,4 +361,5 @@ const styles = {
 	indentedCell: { paddingLeft: "1.5rem" },
 	stripeIn: { borderLeft: "4px solid #16a34a" },
 	stripeOut: { borderLeft: "4px solid #dc2626" },
+	stripeNeither: { borderLeft: "4px solid #1d4ed8" },
 };
