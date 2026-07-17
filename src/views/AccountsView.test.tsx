@@ -8,12 +8,14 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
-import type { Account, ExternalParty } from "../engine/types";
+import type { Account, Adjustment, ExternalParty } from "../engine/types";
 
 vi.mock("@src/hooks/useAccounts");
+vi.mock("@src/hooks/useAdjustments");
 vi.mock("@src/hooks/useExternalParties");
 
 import { useAccounts } from "@src/hooks/useAccounts";
+import { useAdjustments } from "@src/hooks/useAdjustments";
 import { useExternalParties } from "@src/hooks/useExternalParties";
 import AccountsView from "./AccountsView";
 
@@ -56,7 +58,11 @@ const negativeAccount: Account = {
 
 const party: ExternalParty = { id: "party-1", name: "Employer" };
 
-function setupMocks(accounts: Account[] = [], parties: ExternalParty[] = []) {
+function setupMocks(
+	accounts: Account[] = [],
+	parties: ExternalParty[] = [],
+	adjustments: Adjustment[] = [],
+) {
 	vi.mocked(useAccounts).mockReturnValue({
 		accounts,
 		addAccount: mockAddAccount,
@@ -65,6 +71,12 @@ function setupMocks(accounts: Account[] = [], parties: ExternalParty[] = []) {
 		refresh: vi.fn(),
 		error: null,
 	} as ReturnType<typeof useAccounts>);
+	vi.mocked(useAdjustments).mockReturnValue({
+		adjustments,
+		addAdjustment: vi.fn(),
+		deleteAdjustment: vi.fn(),
+		error: null,
+	} as ReturnType<typeof useAdjustments>);
 	vi.mocked(useExternalParties).mockReturnValue({
 		externalParties: parties,
 		addParty: mockAddParty,
@@ -258,5 +270,83 @@ describe("AccountsView — with data", () => {
 			fireEvent.click(deleteBtns.at(-1)!);
 		});
 		expect(mockDeleteParty).not.toHaveBeenCalled();
+	});
+});
+
+describe("AccountsView — Net Worth", () => {
+	it("sums account balances into a household-wide Net Worth total", () => {
+		setupMocks([account, negativeAccount]);
+		renderView();
+		// 1000 + (-500) = 500
+		expect(screen.getByText("$500")).toBeTruthy();
+	});
+
+	it("renders a negative Net Worth total in red", () => {
+		const bigDebt: Account = { ...negativeAccount, id: "acc-3", seedBalance: -5000 };
+		setupMocks([account, bigDebt]);
+		renderView();
+		// 1000 + (-5000) = -4000
+		const total = screen.getByText("-$4,000");
+		expect(total.style.color).toBe("rgb(220, 38, 38)");
+	});
+
+	it("sums an amortizing account's raw negative balance into Net Worth, not its displayed positive flip", () => {
+		const loanAccount: Account = {
+			id: "acc-loan",
+			name: "Car Loan",
+			type: "loan",
+			owner: "Sean",
+			seedBalance: -20000,
+			seedDate: "2024-01-01",
+			rate: 0,
+			amortizing: true,
+		};
+		setupMocks([account, loanAccount]);
+		renderView();
+		// 1000 + (-20000) = -19000, not 1000 + 20000
+		expect(screen.getByText("-$19,000")).toBeTruthy();
+	});
+});
+
+describe("AccountsView — Adjustment-aware balances", () => {
+	it("falls back to seedBalance and seedDate when no Adjustment exists for the account", () => {
+		setupMocks([account]);
+		renderView();
+		// Net Worth total and the row balance coincide (one account) — both show $1,000
+		expect(screen.getAllByText("$1,000")).toHaveLength(2);
+		expect(screen.getByText("Jan 1, 2024")).toBeTruthy();
+	});
+
+	it("uses the latest qualifying Adjustment's balance and date for a row", () => {
+		const adjustments: Adjustment[] = [
+			{ id: "adj-1", accountId: "acc-1", date: "2025-01-01", actualBalance: 1750 },
+		];
+		setupMocks([account], [], adjustments);
+		renderView();
+		expect(screen.getAllByText("$1,750")).toHaveLength(2);
+		expect(screen.getByText("Jan 1, 2025")).toBeTruthy();
+		expect(screen.queryByText("$1,000")).toBeNull();
+	});
+
+	it("uses the most recent of multiple Adjustments for both the row and Net Worth", () => {
+		const adjustments: Adjustment[] = [
+			{ id: "adj-1", accountId: "acc-1", date: "2025-01-01", actualBalance: 1750 },
+			{ id: "adj-2", accountId: "acc-1", date: "2025-06-01", actualBalance: 2000 },
+		];
+		setupMocks([account], [], adjustments);
+		renderView();
+		expect(screen.getByText("Jun 1, 2025")).toBeTruthy();
+		expect(screen.getAllByText("$2,000")).toHaveLength(2);
+	});
+
+	it("ignores an Adjustment dated in the future", () => {
+		const farFuture = "2999-01-01";
+		const adjustments: Adjustment[] = [
+			{ id: "adj-1", accountId: "acc-1", date: farFuture, actualBalance: 9999 },
+		];
+		setupMocks([account], [], adjustments);
+		renderView();
+		expect(screen.getAllByText("$1,000")).toHaveLength(2);
+		expect(screen.getByText("Jan 1, 2024")).toBeTruthy();
 	});
 });

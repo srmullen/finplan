@@ -36,7 +36,18 @@ vi.mock("@src/components/ScenarioManager", () => ({
 	},
 }));
 let capturedTickFormatter: ((v: unknown) => string) | undefined;
-let capturedTooltipFormatter: ((v: number) => string) | undefined;
+type TooltipContentFn = (props: {
+	active?: boolean;
+	payload?: Array<{
+		dataKey?: string | number;
+		name?: string | number;
+		value?: number;
+		color?: string;
+		payload?: Record<string, string | number>;
+	}>;
+	label?: string | number;
+}) => React.ReactNode;
+let capturedTooltipContent: TooltipContentFn | undefined;
 let capturedChartData: Record<string, string | number>[] = [];
 
 vi.mock("recharts", () => ({
@@ -60,8 +71,8 @@ vi.mock("recharts", () => ({
 		return null;
 	},
 	CartesianGrid: () => null,
-	Tooltip: ({ formatter }: { formatter?: (v: number) => string }) => {
-		if (formatter) capturedTooltipFormatter = formatter;
+	Tooltip: ({ content }: { content?: TooltipContentFn }) => {
+		if (content) capturedTooltipContent = content;
 		return null;
 	},
 	Legend: () => null,
@@ -616,11 +627,166 @@ describe("ProjectionView — chart formatters", () => {
 		expect(capturedTickFormatter?.(-500)).toBe("-$500");
 	});
 
-	it("tooltip formatter formats values as USD currency", async () => {
+	it("tooltip content renders per-series values as USD currency", async () => {
 		render(<ProjectionView />);
 		await act(async () => {});
-		expect(capturedTooltipFormatter).toBeDefined();
-		expect(capturedTooltipFormatter?.(9876)).toBe("$9,876");
+		expect(capturedTooltipContent).toBeDefined();
+		const { container } = render(
+			<>
+				{capturedTooltipContent?.({
+					active: true,
+					label: "2024-01",
+					payload: [
+						{
+							dataKey: "acc-1",
+							name: "Checking",
+							value: 9876,
+							color: "#2563eb",
+							payload: { date: "2024-01", fullDate: "2024-01-01" },
+						},
+					],
+				})}
+			</>,
+		);
+		expect(container.textContent).toContain("$9,876");
+	});
+});
+
+describe("ProjectionView — Net Worth", () => {
+	it("renders a Net Worth stat card with current and horizon-end figures", async () => {
+		setupMocks([account]);
+		vi.mocked(get).mockResolvedValue({
+			"acc-1": [
+				{ date: "2024-01-01", balance: 1000 },
+				{ date: "2024-02-01", balance: 1500 },
+			],
+		});
+		render(<ProjectionView />);
+		await act(async () => {});
+
+		expect(screen.getByTestId("net-worth-baseline").textContent).toBe(
+			"$1,000",
+		);
+		expect(screen.getByTestId("net-worth-horizon-baseline").textContent).toBe(
+			"$1,500 at end of horizon",
+		);
+	});
+
+	it("sums an amortizing account's raw negative balance into the Net Worth card, not its displayed positive flip", async () => {
+		setupMocks([amortizingAccount]);
+		vi.mocked(get).mockResolvedValue({
+			"loan-1": [{ date: "2024-01-01", balance: -10000 }],
+		});
+		render(<ProjectionView />);
+		await act(async () => {});
+
+		expect(screen.getByTestId("net-worth-baseline").textContent).toBe(
+			"-$10,000",
+		);
+	});
+
+	it("excludes a hidden account from the Net Worth card", async () => {
+		setupMocks([account, { ...account, id: "acc-2", name: "Savings" }]);
+		vi.mocked(get).mockResolvedValue({
+			"acc-1": [{ date: "2024-01-01", balance: 1000 }],
+			"acc-2": [{ date: "2024-01-01", balance: 500 }],
+		});
+		render(<ProjectionView />);
+		await act(async () => {});
+
+		expect(screen.getByTestId("net-worth-baseline").textContent).toBe(
+			"$1,500",
+		);
+
+		fireEvent.click(screen.getAllByRole("checkbox")[1]!);
+		await act(async () => {});
+
+		expect(screen.getByTestId("net-worth-baseline").textContent).toBe(
+			"$1,000",
+		);
+	});
+
+	it("shows a separate Net Worth card per Scenario group, including a scenario's additional accounts", async () => {
+		const scenario: Scenario = {
+			id: "sc-1",
+			name: "Side gig",
+			scheduleOverrides: [],
+			additionalSchedules: [],
+			additionalAccounts: [
+				{
+					id: "acc-side",
+					name: "Side Gig Account",
+					type: "checking",
+					owner: "Sean",
+					seedBalance: 0,
+					seedDate: "2024-01-01",
+					rate: 0,
+					amortizing: false,
+				},
+			],
+		};
+		setupMocks([account], [scenario]);
+		vi.mocked(get)
+			.mockResolvedValueOnce({
+				"acc-1": [{ date: "2024-01-01", balance: 1000 }],
+			})
+			.mockResolvedValue({
+				"acc-1": [{ date: "2024-01-01", balance: 1000 }],
+				"acc-side": [{ date: "2024-01-01", balance: 300 }],
+			});
+
+		render(<ProjectionView />);
+		await act(async () => {});
+
+		fireEvent.click(screen.getByRole("button", { name: "Scenarios" }));
+		await act(async () => {});
+		await act(async () => {
+			capturedToggleScenario("sc-1");
+		});
+		await act(async () => {});
+
+		expect(screen.getByTestId("net-worth-baseline").textContent).toBe(
+			"$1,000",
+		);
+		expect(screen.getByTestId("net-worth-sc-1").textContent).toBe("$1,300");
+	});
+
+	it("renders the current Net Worth tooltip row for a hovered date", async () => {
+		setupMocks([account]);
+		vi.mocked(get).mockResolvedValue({
+			"acc-1": [{ date: "2024-01-01", balance: 1000 }],
+		});
+		render(<ProjectionView />);
+		await act(async () => {});
+
+		expect(capturedTooltipContent).toBeDefined();
+		const { container } = render(
+			<>
+				{capturedTooltipContent?.({
+					active: true,
+					label: "2024-01",
+					payload: [
+						{
+							dataKey: "acc-1",
+							name: "Checking",
+							value: 1000,
+							color: "#2563eb",
+							payload: { date: "2024-01", fullDate: "2024-01-01" },
+						},
+					],
+				})}
+			</>,
+		);
+		expect(container.textContent).toContain("Net Worth");
+		expect(container.textContent).toContain("$1,000");
+	});
+
+	it("renders no tooltip content when the tooltip is inactive", async () => {
+		setupMocks([account]);
+		render(<ProjectionView />);
+		await act(async () => {});
+
+		expect(capturedTooltipContent?.({ active: false, payload: [] })).toBeNull();
 	});
 });
 

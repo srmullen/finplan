@@ -1,3 +1,4 @@
+import { resolveEffectiveBalance } from "../utils/resolveEffectiveBalance";
 import type {
 	Account,
 	Adjustment,
@@ -132,13 +133,10 @@ export function project(input: ProjectionInput): ProjectionResult {
 	const accountById = new Map(allAccounts.map((a) => [a.id, a]));
 
 	const balances = new Map<string, number>(
-		allAccounts.map((a) => {
-			const adjs = adjByAccount.get(a.id) ?? [];
-			const latest = adjs
-				.filter((adj) => adj.date <= startDate)
-				.sort((x, y) => y.date.localeCompare(x.date))[0];
-			return [a.id, latest ? latest.actualBalance : a.seedBalance];
-		}),
+		allAccounts.map((a) => [
+			a.id,
+			resolveEffectiveBalance(a, adjustments, startDate).balance,
+		]),
 	);
 
 	const result: ProjectionResult = Object.fromEntries(
