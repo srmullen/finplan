@@ -788,6 +788,79 @@ describe("ProjectionView — Net Worth", () => {
 
 		expect(capturedTooltipContent?.({ active: false, payload: [] })).toBeNull();
 	});
+
+	it("treats a hovered date with no matching balance point as a zero contribution", async () => {
+		setupMocks([account]);
+		vi.mocked(get).mockResolvedValue({
+			"acc-1": [{ date: "2024-01-01", balance: 1000 }],
+		});
+		render(<ProjectionView />);
+		await act(async () => {});
+
+		expect(capturedTooltipContent).toBeDefined();
+		const { container } = render(
+			<>
+				{capturedTooltipContent?.({
+					active: true,
+					label: "2099-01",
+					payload: [
+						{
+							dataKey: "acc-1",
+							name: "Checking",
+							value: 0,
+							color: "#2563eb",
+							payload: { date: "2099-01", fullDate: "2099-01-01" },
+						},
+					],
+				})}
+			</>,
+		);
+		expect(container.textContent).toContain("Net Worth: $0");
+	});
+
+	it("labels each Net Worth tooltip row by group once more than one group is active", async () => {
+		const scenario: Scenario = {
+			id: "sc-1",
+			name: "Side gig",
+			scheduleOverrides: [],
+			additionalSchedules: [],
+			additionalAccounts: [],
+		};
+		setupMocks([account], [scenario]);
+		vi.mocked(get).mockResolvedValue({
+			"acc-1": [{ date: "2024-01-01", balance: 1000 }],
+		});
+		render(<ProjectionView />);
+		await act(async () => {});
+
+		fireEvent.click(screen.getByRole("button", { name: "Scenarios" }));
+		await act(async () => {});
+		await act(async () => {
+			capturedToggleScenario("sc-1");
+		});
+		await act(async () => {});
+
+		expect(capturedTooltipContent).toBeDefined();
+		const { container } = render(
+			<>
+				{capturedTooltipContent?.({
+					active: true,
+					label: "2024-01",
+					payload: [
+						{
+							dataKey: "acc-1",
+							name: "Checking",
+							value: 1000,
+							color: "#2563eb",
+							payload: { date: "2024-01", fullDate: "2024-01-01" },
+						},
+					],
+				})}
+			</>,
+		);
+		expect(container.textContent).toContain("Net Worth — Baseline");
+		expect(container.textContent).toContain("Net Worth — Side gig");
+	});
 });
 
 describe("ProjectionView — scenario fetching", () => {

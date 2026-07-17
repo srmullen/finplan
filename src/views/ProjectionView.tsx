@@ -118,7 +118,10 @@ function netWorthFigures(
 		),
 		horizonEnd: computeNetWorth(
 			groupAccounts,
-			(id) => groupResult[id]?.at(-1)?.balance ?? 0,
+			(id) => {
+				const series = groupResult[id];
+				return series?.[series.length - 1]?.balance ?? 0;
+			},
 			visibleAccountIds,
 		),
 	};
