@@ -13,6 +13,7 @@ WORKDIR /app
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/server ./server
 COPY --from=builder /app/src/engine ./src/engine
+COPY --from=builder /app/src/utils ./src/utils
 COPY --from=builder /app/node_modules ./node_modules
 
 RUN mkdir -p /data
