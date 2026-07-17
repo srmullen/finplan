@@ -78,10 +78,15 @@ export default function AccountsView() {
 
 	const asOfDate = today();
 	const effectiveBalances = new Map(
-		accounts.map((a) => [a.id, resolveEffectiveBalance(a, adjustments, asOfDate)]),
+		accounts.map((a) => [
+			a.id,
+			resolveEffectiveBalance(a, adjustments, asOfDate),
+		]),
 	);
-	// biome-ignore lint/style/noNonNullAssertion: id always comes from the same accounts list the map was built from
-	const netWorth = computeNetWorth(accounts, (id) => effectiveBalances.get(id)!.balance);
+	const netWorth = computeNetWorth(accounts, (id) => {
+		// biome-ignore lint/style/noNonNullAssertion: id always comes from the same accounts list the map was built from
+		return effectiveBalances.get(id)!.balance;
+	});
 
 	return (
 		<div>
