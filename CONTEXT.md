@@ -79,5 +79,9 @@ The output of a simulation: a time series of Account balances from a start date 
 _Avoid_: Forecast, simulation output, plan
 
 **Adjustment**:
-A manually recorded real-world balance for a single Account at a specific date. Used to anchor future Projections to reality and to compute variance against what was projected. Adjustments are per-Account and do not require all accounts to be updated simultaneously.
+A manually recorded real-world balance for a single Account at a specific date. Used to anchor future Projections to reality, to compute variance against what was projected, and to determine the displayed current balance for an Account (see ADR 0024). Adjustments are per-Account and do not require all accounts to be updated simultaneously.
 _Avoid_: Snapshot, checkpoint, reconciliation
+
+**Net Worth**:
+The sum of raw signed balances across all Accounts at a point in time — the same sign convention Account balances use natively (liabilities negative, assets positive), not the amortizing sign flip applied by `displayBalance` for on-screen display (see Amortizing Account). A single household-wide total; not broken down by Owner. On the Accounts page, each Account contributes its Adjustment-aware current balance (see ADR 0024). On the Projection page, each Account contributes its Projection balance for a given date, scoped to the Accounts currently visible in the account filter, and reported once per Scenario group (Baseline, plus one per active Scenario) alongside Total In/Total Out (see ADR 0023).
+_Avoid_: Equity, portfolio value, balance sheet
