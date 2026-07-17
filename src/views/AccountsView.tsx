@@ -77,13 +77,13 @@ export default function AccountsView() {
 	);
 
 	const asOfDate = today();
-	const effectiveBalances = new Map(
-		accounts.map((a) => [a.id, resolveEffectiveBalance(a, adjustments, asOfDate)]),
-	);
-	const netWorth = computeNetWorth(
-		accounts,
-		(id) => effectiveBalances.get(id)!.balance,
-	);
+	const accountById = new Map(accounts.map((a) => [a.id, a]));
+	const netWorth = computeNetWorth(accounts, (id) => {
+		const acct = accountById.get(id);
+		return acct
+			? resolveEffectiveBalance(acct, adjustments, asOfDate).balance
+			: 0;
+	});
 
 	return (
 		<div>
@@ -143,57 +143,63 @@ export default function AccountsView() {
 					</thead>
 					<tbody>
 						{sortedAccounts.map((a) => {
-							const effective = effectiveBalances.get(a.id)!;
+							const effective = resolveEffectiveBalance(
+								a,
+								adjustments,
+								asOfDate,
+							);
 							return (
-							<tr key={a.id}>
-								<td>
-									<Link to={`/accounts/${a.id}`} style={styles.nameLink}>
-										{a.name}
-									</Link>
-								</td>
-								<td>{a.owner}</td>
-								<td>{a.institution ?? ""}</td>
-								<td>{a.type.replace("_", " ")}</td>
-								<td
-									style={{
-										textAlign: "right",
-										fontVariantNumeric: "tabular-nums",
-									}}
-								>
-									<span
+								<tr key={a.id}>
+									<td>
+										<Link to={`/accounts/${a.id}`} style={styles.nameLink}>
+											{a.name}
+										</Link>
+									</td>
+									<td>{a.owner}</td>
+									<td>{a.institution ?? ""}</td>
+									<td>{a.type.replace("_", " ")}</td>
+									<td
 										style={{
-											color:
-												!a.amortizing && effective.balance < 0
-													? "#dc2626"
-													: undefined,
+											textAlign: "right",
+											fontVariantNumeric: "tabular-nums",
 										}}
 									>
-										{formatBalance(displayBalance(a, effective.balance))}
-									</span>
-								</td>
-								<td>{formatDate(effective.date)}</td>
-								<td>{a.rate !== 0 ? `${(a.rate * 100).toFixed(1)}%` : "—"}</td>
-								<td>{a.amortizing ? "amortizing" : "revolving"}</td>
-								<td style={styles.actions}>
-									<button
-										type="button"
-										style={styles.editBtn}
-										onClick={() => {
-											setShowAccountForm(false);
-											setEditingAccount(a);
-										}}
-									>
-										Edit
-									</button>
-									<button
-										type="button"
-										style={styles.deleteBtn}
-										onClick={() => handleDeleteAccount(a.id)}
-									>
-										Delete
-									</button>
-								</td>
-							</tr>
+										<span
+											style={{
+												color:
+													!a.amortizing && effective.balance < 0
+														? "#dc2626"
+														: undefined,
+											}}
+										>
+											{formatBalance(displayBalance(a, effective.balance))}
+										</span>
+									</td>
+									<td>{formatDate(effective.date)}</td>
+									<td>
+										{a.rate !== 0 ? `${(a.rate * 100).toFixed(1)}%` : "—"}
+									</td>
+									<td>{a.amortizing ? "amortizing" : "revolving"}</td>
+									<td style={styles.actions}>
+										<button
+											type="button"
+											style={styles.editBtn}
+											onClick={() => {
+												setShowAccountForm(false);
+												setEditingAccount(a);
+											}}
+										>
+											Edit
+										</button>
+										<button
+											type="button"
+											style={styles.deleteBtn}
+											onClick={() => handleDeleteAccount(a.id)}
+										>
+											Delete
+										</button>
+									</td>
+								</tr>
 							);
 						})}
 					</tbody>

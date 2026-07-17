@@ -387,9 +387,9 @@ export default function ProjectionView() {
 		return (
 			<div style={styles.tooltip}>
 				<div style={styles.tooltipLabel}>{label}</div>
-				{payload.map((entry, i) => (
+				{payload.map((entry) => (
 					<div
-						key={`${entry.dataKey}-${i}`}
+						key={entry.dataKey}
 						style={{ ...styles.tooltipRow, color: entry.color }}
 					>
 						{entry.name}: {formatCurrency(Number(entry.value))}
@@ -509,9 +509,7 @@ export default function ProjectionView() {
 											data-testid={`net-worth-${g.key}`}
 											style={{
 												...styles.totalAmount,
-												...(g.netWorth.current < 0
-													? { color: "#dc2626" }
-													: {}),
+												...(g.netWorth.current < 0 ? { color: "#dc2626" } : {}),
 											}}
 										>
 											{formatCurrency(g.netWorth.current)}
