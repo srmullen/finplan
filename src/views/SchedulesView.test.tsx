@@ -335,11 +335,11 @@ describe("SchedulesView — row cash flow stripe", () => {
 		expect(row.style.borderLeft).toBe("4px solid rgb(220, 38, 38)");
 	});
 
-	it("shows no stripe on a row classified as neither", () => {
+	it("shows a blue left-border stripe on a row classified as neither (internal transfer)", () => {
 		setupMocks([neitherSchedule], [account], [party]);
 		render(<SchedulesView />);
 		const row = screen.getByText("$3,000 ~").closest("tr") as HTMLTableRowElement;
-		expect(row.style.borderLeft).toBe("");
+		expect(row.style.borderLeft).toBe("4px solid rgb(29, 78, 216)");
 	});
 
 	it("stripes payment group member rows individually without striping the group header", () => {
