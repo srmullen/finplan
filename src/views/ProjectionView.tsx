@@ -13,7 +13,7 @@ import {
 import { get } from "../api/client";
 import ScenarioManager from "../components/ScenarioManager";
 import { resolveSchedules } from "../engine/projection";
-import type { ProjectionResult } from "../engine/types";
+import type { Account, ProjectionResult } from "../engine/types";
 import { useAccounts } from "../hooks/useAccounts";
 import { useExternalParties } from "../hooks/useExternalParties";
 import { useScenarios } from "../hooks/useScenarios";
@@ -24,6 +24,7 @@ import {
 	computeHorizonCashFlowTotals,
 } from "../utils/cashFlow";
 import { displayBalance } from "../utils/displayBalance";
+import { computeNetWorth } from "../utils/netWorth";
 
 const PALETTE = [
 	"#2563eb",
@@ -88,11 +89,50 @@ function buildProjectionUrl(
 	return `/api/projection?${params.toString()}`;
 }
 
+interface NetWorthFigures {
+	current: number;
+	horizonEnd: number;
+}
+
 interface CashFlowGroup {
 	key: string;
 	label: string;
 	monthly: CashFlowTotals;
 	cumulative: CashFlowTotals;
+	netWorth: NetWorthFigures;
+	accounts: Account[];
+	visibleAccountIds: Set<string>;
+	groupResult: ProjectionResult;
+}
+
+function netWorthFigures(
+	groupAccounts: Account[],
+	groupResult: ProjectionResult,
+	visibleAccountIds: Set<string>,
+): NetWorthFigures {
+	return {
+		current: computeNetWorth(
+			groupAccounts,
+			(id) => groupResult[id]?.[0]?.balance ?? 0,
+			visibleAccountIds,
+		),
+		horizonEnd: computeNetWorth(
+			groupAccounts,
+			(id) => {
+				const series = groupResult[id];
+				return series?.[series.length - 1]?.balance ?? 0;
+			},
+			visibleAccountIds,
+		),
+	};
+}
+
+function netWorthAtDate(group: CashFlowGroup, date: string): number {
+	return computeNetWorth(
+		group.accounts,
+		(id) => group.groupResult[id]?.find((p) => p.date === date)?.balance ?? 0,
+		group.visibleAccountIds,
+	);
 }
 
 export default function ProjectionView() {
@@ -186,6 +226,10 @@ export default function ProjectionView() {
 				endDate,
 				visibleAccountIds,
 			),
+			netWorth: netWorthFigures(accounts, result, visibleAccountIds),
+			accounts,
+			visibleAccountIds,
+			groupResult: result,
 		},
 	];
 	for (const scId of activeScenarioIds) {
@@ -217,6 +261,14 @@ export default function ProjectionView() {
 				endDate,
 				scenarioVisibleIds,
 			),
+			netWorth: netWorthFigures(
+				scenarioAccounts,
+				scenarioResults[scId] ?? {},
+				scenarioVisibleIds,
+			),
+			accounts: scenarioAccounts,
+			visibleAccountIds: scenarioVisibleIds,
+			groupResult: scenarioResults[scId] ?? {},
 		});
 	}
 
@@ -226,7 +278,10 @@ export default function ProjectionView() {
 			: [];
 
 	const chartData = refSeries.map(({ date }) => {
-		const row: Record<string, string | number> = { date: date.slice(0, 7) };
+		const row: Record<string, string | number> = {
+			date: date.slice(0, 7),
+			fullDate: date,
+		};
 		for (const account of visibleAccounts) {
 			const point = (result[account.id] ?? []).find((p) => p.date === date);
 			row[account.id] = point
@@ -313,7 +368,46 @@ export default function ProjectionView() {
 	}
 
 	const yAxisTickFormatter = (v: unknown) => formatCurrency(Number(v));
-	const tooltipFormatter = (v: number) => formatCurrency(v);
+
+	function renderTooltipContent({
+		active,
+		payload,
+		label,
+	}: {
+		active?: boolean;
+		payload?: Array<{
+			dataKey?: string | number;
+			name?: string | number;
+			value?: number;
+			color?: string;
+			payload?: Record<string, string | number>;
+		}>;
+		label?: string | number;
+	}) {
+		if (!active || !payload || payload.length === 0) return null;
+		const fullDate = payload[0]?.payload?.fullDate;
+
+		return (
+			<div style={styles.tooltip}>
+				<div style={styles.tooltipLabel}>{label}</div>
+				{payload.map((entry) => (
+					<div
+						key={entry.dataKey}
+						style={{ ...styles.tooltipRow, color: entry.color }}
+					>
+						{entry.name}: {formatCurrency(Number(entry.value))}
+					</div>
+				))}
+				{typeof fullDate === "string" &&
+					cashFlowGroups.map((g) => (
+						<div key={`nw-${g.key}`} style={styles.tooltipNetWorth}>
+							Net Worth{cashFlowGroups.length > 1 ? ` — ${g.label}` : ""}:{" "}
+							{formatCurrency(netWorthAtDate(g, fullDate))}
+						</div>
+					))}
+			</div>
+		);
+	}
 
 	return (
 		<div>
@@ -412,6 +506,24 @@ export default function ProjectionView() {
 											{formatCurrency(g.cumulative.totalOut)} over horizon
 										</span>
 									</div>
+									<div style={styles.totalCard}>
+										<span style={styles.totalLabel}>Net Worth</span>
+										<span
+											data-testid={`net-worth-${g.key}`}
+											style={{
+												...styles.totalAmount,
+												...(g.netWorth.current < 0 ? { color: "#dc2626" } : {}),
+											}}
+										>
+											{formatCurrency(g.netWorth.current)}
+										</span>
+										<span
+											data-testid={`net-worth-horizon-${g.key}`}
+											style={styles.totalSub}
+										>
+											{formatCurrency(g.netWorth.horizonEnd)} at end of horizon
+										</span>
+									</div>
 								</div>
 							</div>
 						))}
@@ -457,7 +569,7 @@ export default function ProjectionView() {
 								tick={{ fontSize: 11 }}
 								width={90}
 							/>
-							<Tooltip formatter={tooltipFormatter} />
+							<Tooltip content={renderTooltipContent} />
 							<Legend />
 							<ReferenceLine y={0} stroke="#9ca3af" strokeDasharray="4 2" />
 							{milestones.map((m) => (
@@ -512,6 +624,27 @@ export default function ProjectionView() {
 }
 
 const styles = {
+	tooltip: {
+		background: "#fff",
+		border: "1px solid #e5e7eb",
+		borderRadius: "6px",
+		padding: "0.5rem 0.75rem",
+		fontSize: "0.8rem",
+	},
+	tooltipLabel: {
+		fontWeight: 600,
+		marginBottom: "0.25rem",
+	},
+	tooltipRow: {
+		fontVariantNumeric: "tabular-nums" as const,
+	},
+	tooltipNetWorth: {
+		marginTop: "0.25rem",
+		paddingTop: "0.25rem",
+		borderTop: "1px solid #e5e7eb",
+		fontWeight: 600,
+		fontVariantNumeric: "tabular-nums" as const,
+	},
 	header: {
 		display: "flex",
 		alignItems: "center",

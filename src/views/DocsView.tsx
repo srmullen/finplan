@@ -86,6 +86,16 @@ export default function DocsView() {
 					In/Out instead of one blended number, matching the separate lines
 					already drawn on the chart.
 				</DocsBlock>
+				<DocsBlock label="Net Worth">
+					A Net Worth card sits alongside Total In/Out, showing your current net
+					worth and what it's projected to be at the end of your selected
+					horizon — all checked accounts added together, with any loan or credit
+					card balance subtracted rather than added. Like Total In/Out, you get
+					a separate card per Scenario once one is active, so you can see how a
+					what-if changes your overall position, not just individual cash flows.
+					Hovering the chart also shows Net Worth for that date in the tooltip,
+					underneath the individual account values.
+				</DocsBlock>
 			</section>
 
 			<hr style={styles.divider} />
@@ -105,6 +115,16 @@ export default function DocsView() {
 					account's name to record an Adjustment — a real-world balance for a
 					specific date — so future projections start from reality instead of
 					drifting from what was planned.
+				</DocsBlock>
+				<DocsBlock label="Net Worth">
+					A Net Worth total appears at the top of the page, above the account
+					list — every account's balance added together, with any loan or credit
+					card balance subtracted rather than added, so it reflects what you
+					actually have rather than double-counting debt as an asset. It turns
+					red if it's negative. Each account's balance in the list below (and
+					the date next to it) reflects your latest recorded Adjustment for that
+					account, falling back to its original starting balance and date if you
+					haven't recorded one yet.
 				</DocsBlock>
 				<DocsBlock label="Negative balance warning">
 					On an account's detail page, a revolving account (checking, savings,
