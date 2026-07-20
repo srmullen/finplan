@@ -85,6 +85,7 @@ export default function ScheduleForm({
 			...(endDate ? { endDate } : {}),
 			...(initial?.groupId ? { groupId: initial.groupId } : {}),
 			terminateAtZero: destIsAmortizing && terminateAtZero,
+			...(initial?.active === false ? { active: false } : {}),
 		};
 		onSave(schedule);
 	}

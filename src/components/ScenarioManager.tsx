@@ -323,6 +323,8 @@ export default function ScenarioManager({
 		? scenarios.find((s) => s.id === editingId)
 		: null;
 
+	const activeSchedules = schedules.filter((s) => s.active !== false);
+
 	return (
 		<div style={styles.manager}>
 			<h2>Scenarios</h2>
@@ -417,7 +419,7 @@ export default function ScenarioManager({
 					scenario={editingScenario}
 					accounts={accounts}
 					externalParties={externalParties}
-					schedules={schedules}
+					schedules={activeSchedules}
 					onUpdate={(updated) => {
 						void updateScenario(updated).then((success) => {
 							if (success) onScenarioUpdated?.();

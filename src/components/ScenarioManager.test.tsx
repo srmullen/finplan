@@ -283,6 +283,32 @@ describe("ScenarioManager — editor with schedule overrides", () => {
 		expect(screen.getByText("Schedule overrides")).toBeTruthy();
 	});
 
+	it("excludes an inactive baseline schedule from the schedule overrides table", () => {
+		const inactiveSchedule: Schedule = { ...scheduleA, id: "s-2", active: false };
+		setupHooks([scenario], [scheduleA, inactiveSchedule]);
+		render(
+			<ScenarioManager
+				activeScenarioIds={new Set()}
+				onToggleScenario={onToggleScenario}
+			/>,
+		);
+		fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+		expect(screen.getAllByPlaceholderText("500")).toHaveLength(1);
+	});
+
+	it("hides the schedule overrides section entirely when every baseline schedule is inactive", () => {
+		const inactiveSchedule: Schedule = { ...scheduleA, active: false };
+		setupHooks([scenario], [inactiveSchedule]);
+		render(
+			<ScenarioManager
+				activeScenarioIds={new Set()}
+				onToggleScenario={onToggleScenario}
+			/>,
+		);
+		fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+		expect(screen.queryByText("Schedule overrides")).toBeNull();
+	});
+
 	it("does nothing when NaN is entered for a schedule with no existing override", async () => {
 		setupHooks([scenario], [scheduleA]);
 		render(

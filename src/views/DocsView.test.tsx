@@ -35,4 +35,9 @@ describe("DocsView", () => {
 		render(<DocsView />);
 		expect(screen.getAllByText("Negative balance warning")).toHaveLength(2);
 	});
+
+	it("documents the Active/inactive Schedule state", () => {
+		render(<DocsView />);
+		expect(screen.getByText("Active / inactive")).toBeTruthy();
+	});
 });

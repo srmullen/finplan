@@ -430,6 +430,70 @@ describe("SchedulesView — Total In/Out", () => {
 	});
 });
 
+describe("SchedulesView — Active/inactive state", () => {
+	const active: Schedule = { ...schedule, id: "s-active" };
+	const inactive: Schedule = { ...schedule, id: "s-inactive", active: false };
+
+	it("hides inactive schedules by default", () => {
+		setupMocks([active, inactive], [account], [party]);
+		render(<SchedulesView />);
+		expect(screen.getAllByRole("row")).toHaveLength(2); // header + 1 active row
+	});
+
+	it("reveals inactive schedules, dimmed, when 'Show inactive' is checked", () => {
+		setupMocks([active, inactive], [account], [party]);
+		render(<SchedulesView />);
+		fireEvent.click(screen.getByRole("checkbox", { name: "Show inactive" }));
+		expect(screen.getAllByRole("row")).toHaveLength(3); // header + 2 rows
+		const inactiveRow = screen
+			.getAllByRole("button", { name: "Activate" })[0]
+			.closest("tr") as HTMLTableRowElement;
+		expect(inactiveRow.style.opacity).toBe("0.45");
+	});
+
+	it("does not show the 'Show inactive' checkbox when there are no schedules", () => {
+		render(<SchedulesView />);
+		expect(screen.queryByRole("checkbox", { name: "Show inactive" })).toBeNull();
+	});
+
+	it("calls updateSchedule with active: false when Deactivate is clicked on an active schedule", () => {
+		setupMocks([active], [account], [party]);
+		render(<SchedulesView />);
+		fireEvent.click(screen.getByRole("button", { name: "Deactivate" }));
+		expect(mockUpdateSchedule).toHaveBeenCalledWith(
+			expect.objectContaining({ id: "s-active", active: false }),
+		);
+	});
+
+	it("calls updateSchedule with active: true when Activate is clicked on an inactive schedule", () => {
+		setupMocks([inactive], [account], [party]);
+		render(<SchedulesView />);
+		fireEvent.click(screen.getByRole("checkbox", { name: "Show inactive" }));
+		fireEvent.click(screen.getByRole("button", { name: "Activate" }));
+		expect(mockUpdateSchedule).toHaveBeenCalledWith(
+			expect.objectContaining({ id: "s-inactive", active: true }),
+		);
+	});
+
+	it("excludes an inactive schedule's amount from Total In/Out even when shown via 'Show inactive'", () => {
+		const inactiveIncome: Schedule = {
+			id: "s-inactive-income",
+			sourceId: "party-1",
+			destinationId: "acc-1",
+			amount: 3000,
+			estimated: false,
+			frequency: "monthly",
+			startDate: "2020-01-01",
+			terminateAtZero: false,
+			active: false,
+		};
+		setupMocks([inactiveIncome], [account], [party]);
+		render(<SchedulesView />);
+		fireEvent.click(screen.getByRole("checkbox", { name: "Show inactive" }));
+		expect(screen.getByTestId("total-in").textContent).toBe("$0/mo");
+	});
+});
+
 describe("SchedulesView — Payment Groups", () => {
 	const group: ScheduleGroup = { id: "g-1", name: "Mortgage" };
 	const memberA: Schedule = {

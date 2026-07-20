@@ -1033,6 +1033,49 @@ describe("ProjectionView — cash flow totals", () => {
 		expect(screen.queryByText("Baseline")).toBeNull();
 	});
 
+	it("excludes an inactive schedule from the Baseline Total In/Out", async () => {
+		setupMocks(
+			[account, creditCard],
+			[],
+			[{ ...incomeSchedule, active: false }, debtPayment],
+			[employer],
+		);
+		render(<ProjectionView />);
+		await act(async () => {});
+
+		expect(screen.getByTestId("total-in-baseline").textContent).toBe("$0/mo");
+		expect(screen.getByTestId("total-out-baseline").textContent).toBe(
+			"$200/mo",
+		);
+	});
+
+	it("excludes a Baseline-inactive schedule from a Scenario's Total In/Out, even with a paused:false override", async () => {
+		const scenario: Scenario = {
+			id: "sc-1",
+			name: "Try to reactivate",
+			scheduleOverrides: [{ scheduleId: "s-income", paused: false }],
+			additionalSchedules: [],
+			additionalAccounts: [],
+		};
+		setupMocks(
+			[account],
+			[scenario],
+			[{ ...incomeSchedule, active: false }],
+			[employer],
+		);
+		render(<ProjectionView />);
+		await act(async () => {});
+
+		fireEvent.click(screen.getByRole("button", { name: "Scenarios" }));
+		await act(async () => {});
+		await act(async () => {
+			capturedToggleScenario("sc-1");
+		});
+		await act(async () => {});
+
+		expect(screen.getByTestId("total-in-sc-1").textContent).toBe("$0/mo");
+	});
+
 	it("shows separate Baseline and Scenario groups once a scenario is active", async () => {
 		const scenario: Scenario = {
 			id: "sc-1",

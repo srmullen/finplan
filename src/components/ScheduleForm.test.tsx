@@ -399,6 +399,40 @@ describe("ScheduleForm — edit mode", () => {
 			(screen.getByLabelText("From") as HTMLSelectElement).disabled,
 		).toBe(false);
 	});
+
+	it("preserves active: false on submit when editing an inactive schedule", () => {
+		render(
+			<ScheduleForm
+				initial={{ ...existingSchedule, active: false }}
+				accounts={accounts}
+				externalParties={parties}
+				onSave={onSave}
+				onCancel={onCancel}
+			/>,
+		);
+		fireEvent.submit(
+			screen.getByRole("button", { name: "Save changes" }).closest("form")!,
+		);
+		const saved = onSave.mock.calls.at(-1)?.[0] as Schedule;
+		expect(saved.active).toBe(false);
+	});
+
+	it("does not add an active field when editing an active schedule", () => {
+		render(
+			<ScheduleForm
+				initial={existingSchedule}
+				accounts={accounts}
+				externalParties={parties}
+				onSave={onSave}
+				onCancel={onCancel}
+			/>,
+		);
+		fireEvent.submit(
+			screen.getByRole("button", { name: "Save changes" }).closest("form")!,
+		);
+		const saved = onSave.mock.calls.at(-1)?.[0] as Schedule;
+		expect(saved.active).toBeUndefined();
+	});
 });
 
 describe("ScheduleForm — editing a payment group member", () => {
