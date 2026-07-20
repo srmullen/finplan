@@ -347,11 +347,11 @@ describe("AccountsView — Account In/Out/Remaining", () => {
 
 		// Checking (source): Out $200, Remaining -$200. Savings (destination):
 		// In $200, Remaining $200. Total In/Out both $200 (net zero remaining).
-		expect(screen.getAllByText("-$200")).toHaveLength(2); // Checking's Out + Total Out
-		expect(screen.getAllByText("+$200")).toHaveLength(2); // Savings' In + Total In
-		expect(screen.getByText("= -$200")).toBeTruthy();
-		expect(screen.getByText("= $200")).toBeTruthy();
-		expect(screen.getByText("= $0")).toBeTruthy(); // Total row: In and Out net to zero
+		expect(screen.getAllByText("-$200/mo")).toHaveLength(2); // Checking's Out + Total Out
+		expect(screen.getAllByText("+$200/mo")).toHaveLength(2); // Savings' In + Total In
+		expect(screen.getByText("= -$200/mo")).toBeTruthy();
+		expect(screen.getByText("= $200/mo")).toBeTruthy();
+		expect(screen.getByText("= $0/mo")).toBeTruthy(); // Total row: In and Out net to zero
 	});
 
 	it("excludes an inactive schedule from Account In/Out (ADR-0026)", () => {
@@ -375,7 +375,7 @@ describe("AccountsView — Account In/Out/Remaining", () => {
 		setupMocks([account, savings], [], [], [inactiveTransfer]);
 		renderView();
 
-		expect(screen.getAllByText("+$0")).toHaveLength(3); // Checking + Savings + Total
+		expect(screen.getAllByText("+$0/mo")).toHaveLength(3); // Checking + Savings + Total
 	});
 
 	it("sums per-account figures into a Total row", () => {
@@ -410,11 +410,11 @@ describe("AccountsView — Account In/Out/Remaining", () => {
 
 		expect(screen.getByText("Total")).toBeTruthy();
 		// Total In: 1000 (income) + 200 (transfer into Savings) = 1200
-		expect(screen.getByText("+$1,200")).toBeTruthy();
+		expect(screen.getByText("+$1,200/mo")).toBeTruthy();
 		// Total Out: 200 (transfer out of Checking) — same $200 as Checking's own Out cell
-		expect(screen.getAllByText("-$200")).toHaveLength(2);
+		expect(screen.getAllByText("-$200/mo")).toHaveLength(2);
 		// Total Remaining: 1200 - 200 = 1000
-		expect(screen.getByText("= $1,000")).toBeTruthy();
+		expect(screen.getByText("= $1,000/mo")).toBeTruthy();
 	});
 });
 

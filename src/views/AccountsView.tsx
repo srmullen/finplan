@@ -39,10 +39,10 @@ function CashFlowCell({ cashFlow }: { cashFlow: AccountCashFlow }) {
 	return (
 		<span style={styles.cashFlowCell}>
 			<span style={styles.cashFlowIn}>
-				+{formatBalance(cashFlow.accountIn)}
+				+{formatBalance(cashFlow.accountIn)}/mo
 			</span>
 			<span style={styles.cashFlowOut}>
-				-{formatBalance(cashFlow.accountOut)}
+				-{formatBalance(cashFlow.accountOut)}/mo
 			</span>
 			<span
 				style={{
@@ -50,7 +50,7 @@ function CashFlowCell({ cashFlow }: { cashFlow: AccountCashFlow }) {
 					color: cashFlow.remaining < 0 ? "#dc2626" : "#16a34a",
 				}}
 			>
-				= {formatBalance(cashFlow.remaining)}
+				= {formatBalance(cashFlow.remaining)}/mo
 			</span>
 		</span>
 	);
