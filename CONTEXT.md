@@ -50,6 +50,12 @@ _Avoid_: Transaction, payment, movement
 A rule that generates one or more Transfers between two nodes. Defined by an amount, frequency, source node, destination node, start date, and an optional termination condition (end date or balance threshold). Covers both recurring flows and planned one-time events. Supported frequencies: once, weekly, biweekly, semi-monthly, monthly, quarterly, annually.
 _Avoid_: RecurringTransfer, recurring payment, rule
 
+### Schedule properties
+
+**Active**:
+A boolean state on a Schedule (default true) controlling whether it participates in the Baseline Projection, Total In/Total Out, and Account In/Account Out/Remaining. Setting a Schedule to inactive removes it from every calculation as if it didn't exist, without deleting it, and applies to every Scenario built on the Baseline too — a Scenario's `paused` override (see Scenario) can pause a Schedule that's Active in the Baseline, but cannot reactivate one that's inactive there. Applies per-Schedule; a Payment Group has no group-level toggle that cascades to its members (see ADR 0026).
+_Avoid_: Paused (reserved for the Scenario-level override), enabled, disabled
+
 ### Cash flow
 
 **Total In**:
@@ -63,6 +69,14 @@ _Avoid_: Expenses, outflow, spending
 **Monthly-Equivalent Amount**:
 A Schedule's amount normalized to a smoothed monthly rate for display in Total In/Total Out (e.g., a weekly Schedule's amount × 52/12). Used only for the current-month snapshot totals, not for Projections or the cumulative horizon total, both of which replay actual per-occurrence Transfers instead.
 _Avoid_: Monthly average, run rate
+
+**Account In** / **Account Out**:
+The per-Account counterpart to Total In/Total Out: a Schedule counts as Account In if the Account is its destination, or Account Out if the Account is its source — regardless of what's on the other end (ExternalParty, another Account, or a debt Account). This is a simpler rule than Total In/Total Out's (ADR 0019), which special-cases debt-Account destinations and treats transfers between two tracked Accounts as neither In nor Out. Because of that difference, summing Account In/Account Out across every Account does not reproduce Total In/Total Out when debt-Account payments are involved (see ADR 0025). Eligibility for the current month follows the same started/ending rule as Total In/Total Out (see ADR 0020).
+_Avoid_: Income/expenses (per account), inflow/outflow
+
+**Remaining**:
+An Account's Account In minus Account Out for the current month, or — summed across every Account — the household's total Remaining. A derived net-cash-flow snapshot, not a running or projected balance. Uses the same Monthly-Equivalent Amount smoothing as Total In/Total Out.
+_Avoid_: Net flow, surplus, savings rate
 
 ### Simulation
 
