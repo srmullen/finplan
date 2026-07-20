@@ -17,11 +17,13 @@ import { formatDate } from "../utils/formatDate";
 import { computeNetWorth } from "../utils/netWorth";
 import { resolveEffectiveBalance } from "../utils/resolveEffectiveBalance";
 
-const zeroCashFlow: AccountCashFlow = {
-	accountIn: 0,
-	accountOut: 0,
-	remaining: 0,
-};
+function getCashFlow(
+	cashFlows: Map<string, AccountCashFlow>,
+	accountId: string,
+): AccountCashFlow {
+	// biome-ignore lint/style/noNonNullAssertion: accountId always comes from the same accounts list the map was built from
+	return cashFlows.get(accountId)!;
+}
 
 function today(): string {
 	return new Date().toISOString().slice(0, 10);
@@ -129,7 +131,7 @@ export default function AccountsView() {
 	);
 	const cashFlowTotal = accounts.reduce(
 		(acc, a) => {
-			const cf = cashFlows.get(a.id) ?? zeroCashFlow;
+			const cf = getCashFlow(cashFlows, a.id);
 			return {
 				accountIn: acc.accountIn + cf.accountIn,
 				accountOut: acc.accountOut + cf.accountOut,
@@ -231,9 +233,7 @@ export default function AccountsView() {
 										</span>
 									</td>
 									<td style={{ textAlign: "right" }}>
-										<CashFlowCell
-											cashFlow={cashFlows.get(a.id) ?? zeroCashFlow}
-										/>
+										<CashFlowCell cashFlow={getCashFlow(cashFlows, a.id)} />
 									</td>
 									<td>{formatDate(effective.date)}</td>
 									<td>

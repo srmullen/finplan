@@ -139,11 +139,12 @@ export default function AccountDetailView() {
 	const goesNegative =
 		!account.amortizing && projection.some((p) => p.balance < 0);
 
+	// biome-ignore lint/style/noNonNullAssertion: account.id is the only key in the map, since it's the only account passed in
 	const accountCashFlow = computeAccountCashFlows(
 		resolveSchedules(schedules, undefined),
 		[account],
 		startDate,
-	).get(account.id) ?? { accountIn: 0, accountOut: 0, remaining: 0 };
+	).get(account.id)!;
 
 	return (
 		<div>
