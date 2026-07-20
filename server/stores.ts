@@ -47,6 +47,7 @@ function rowToSchedule(row: Record<string, unknown>): Schedule {
 		...(row.end_date ? { endDate: row.end_date as string } : {}),
 		terminateAtZero: Boolean(row.terminate_at_zero),
 		...(row.group_id ? { groupId: row.group_id as string } : {}),
+		...(row.active === 0 ? { active: false } : {}),
 	};
 }
 
@@ -139,11 +140,19 @@ export function createSQLiteStores(db: Database.Database): Stores {
       start_date TEXT NOT NULL,
       end_date TEXT,
       terminate_at_zero INTEGER NOT NULL DEFAULT 0,
-      group_id TEXT
+      group_id TEXT,
+      active INTEGER NOT NULL DEFAULT 1
     )
   `);
 	try {
 		db.exec("ALTER TABLE schedules ADD COLUMN group_id TEXT");
+	} catch {
+		// column already exists
+	}
+	try {
+		db.exec(
+			"ALTER TABLE schedules ADD COLUMN active INTEGER NOT NULL DEFAULT 1",
+		);
 	} catch {
 		// column already exists
 	}
@@ -255,7 +264,7 @@ export function createSQLiteStores(db: Database.Database): Stores {
 		},
 		create: (schedule) => {
 			db.prepare(
-				"INSERT INTO schedules (id, source_id, destination_id, amount, estimated, frequency, start_date, end_date, terminate_at_zero, group_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+				"INSERT INTO schedules (id, source_id, destination_id, amount, estimated, frequency, start_date, end_date, terminate_at_zero, group_id, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 			).run(
 				schedule.id,
 				schedule.sourceId,
@@ -267,11 +276,12 @@ export function createSQLiteStores(db: Database.Database): Stores {
 				schedule.endDate ?? null,
 				schedule.terminateAtZero ? 1 : 0,
 				schedule.groupId ?? null,
+				schedule.active === false ? 0 : 1,
 			);
 		},
 		update: (schedule) => {
 			db.prepare(
-				"UPDATE schedules SET source_id = ?, destination_id = ?, amount = ?, estimated = ?, frequency = ?, start_date = ?, end_date = ?, terminate_at_zero = ?, group_id = ? WHERE id = ?",
+				"UPDATE schedules SET source_id = ?, destination_id = ?, amount = ?, estimated = ?, frequency = ?, start_date = ?, end_date = ?, terminate_at_zero = ?, group_id = ?, active = ? WHERE id = ?",
 			).run(
 				schedule.sourceId,
 				schedule.destinationId,
@@ -282,6 +292,7 @@ export function createSQLiteStores(db: Database.Database): Stores {
 				schedule.endDate ?? null,
 				schedule.terminateAtZero ? 1 : 0,
 				schedule.groupId ?? null,
+				schedule.active === false ? 0 : 1,
 				schedule.id,
 			);
 		},

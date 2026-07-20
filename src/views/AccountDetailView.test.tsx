@@ -280,6 +280,68 @@ describe("AccountDetailView — schedules panel", () => {
 	});
 });
 
+describe("AccountDetailView — Active/inactive state", () => {
+	const activeSchedule: Schedule = { ...schedule, id: "sched-active" };
+	const inactiveSchedule: Schedule = {
+		...schedule,
+		id: "sched-inactive",
+		active: false,
+	};
+
+	it("hides an inactive schedule by default", async () => {
+		setupMocks([account], [activeSchedule, inactiveSchedule]);
+		renderAt("acc-1");
+		await act(async () => {});
+		expect(screen.queryByRole("button", { name: "Activate" })).toBeNull();
+	});
+
+	it("reveals the inactive schedule, dimmed, when 'Show inactive' is checked", async () => {
+		setupMocks([account], [activeSchedule, inactiveSchedule]);
+		renderAt("acc-1");
+		await act(async () => {});
+		fireEvent.click(screen.getByRole("checkbox", { name: "Show inactive" }));
+		const row = screen
+			.getByRole("button", { name: "Activate" })
+			.closest("tr") as HTMLTableRowElement;
+		expect(row.style.opacity).toBe("0.45");
+	});
+
+	it("calls updateSchedule with active: false when Deactivate is clicked", async () => {
+		const mockUpdateSchedule = vi.fn();
+		vi.mocked(useSchedules).mockReturnValue({
+			schedules: [activeSchedule],
+			addSchedule: mockAddSchedule,
+			updateSchedule: mockUpdateSchedule,
+			deleteSchedule: mockDeleteSchedule,
+			error: null,
+		} as ReturnType<typeof useSchedules>);
+		renderAt("acc-1");
+		await act(async () => {});
+		fireEvent.click(screen.getByRole("button", { name: "Deactivate" }));
+		expect(mockUpdateSchedule).toHaveBeenCalledWith(
+			expect.objectContaining({ id: "sched-active", active: false }),
+		);
+	});
+
+	it("calls updateSchedule with active: true when Activate is clicked", async () => {
+		const mockUpdateSchedule = vi.fn();
+		vi.mocked(useSchedules).mockReturnValue({
+			schedules: [inactiveSchedule],
+			addSchedule: mockAddSchedule,
+			updateSchedule: mockUpdateSchedule,
+			deleteSchedule: mockDeleteSchedule,
+			error: null,
+		} as ReturnType<typeof useSchedules>);
+		renderAt("acc-1");
+		await act(async () => {});
+		fireEvent.click(screen.getByRole("checkbox", { name: "Show inactive" }));
+		fireEvent.click(screen.getByRole("button", { name: "Activate" }));
+		expect(mockUpdateSchedule).toHaveBeenCalledWith(
+			expect.objectContaining({ id: "sched-inactive", active: true }),
+		);
+	});
+});
+
 describe("AccountDetailView — projection", () => {
 	it("fetches projection on mount when accounts are loaded", async () => {
 		renderAt("acc-1");

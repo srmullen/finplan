@@ -185,6 +185,22 @@ export default function DocsView() {
 					striped individually based on its own destination — the group's header
 					row is never striped.
 				</DocsBlock>
+				<DocsBlock label="Active / inactive">
+					Every schedule has an Active state, on by default. Deactivating one
+					removes it from the Baseline Projection and Total In/Total Out
+					entirely, as if it didn't exist — without deleting it — and that
+					exclusion carries into every Scenario built on the Baseline too. A
+					Scenario's own "paused" override still works independently and can
+					pause a schedule that's Active in the Baseline, but it can't bring a
+					Baseline-inactive schedule back for that Scenario; reactivating it
+					means editing the Baseline schedule directly. Inactive schedules are
+					hidden by default on both the Schedules page and an account's detail
+					page — check "Show inactive" to reveal them, dimmed the same way a
+					paused schedule is dimmed in the Scenario editor. Use the
+					Activate/Deactivate button on a schedule's row to toggle it. In a
+					Payment Group, each member is toggled individually — there's no
+					group-level action that deactivates every member at once.
+				</DocsBlock>
 			</section>
 		</div>
 	);

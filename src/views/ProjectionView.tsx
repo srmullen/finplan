@@ -206,20 +206,21 @@ export default function ProjectionView() {
 
 	const visibleAccounts = accounts.filter((a) => !hiddenIds.has(a.id));
 	const visibleAccountIds = new Set(visibleAccounts.map((a) => a.id));
+	const activeSchedules = resolveSchedules(schedules, undefined);
 
 	const cashFlowGroups: CashFlowGroup[] = [
 		{
 			key: "baseline",
 			label: "Baseline",
 			monthly: computeCashFlowTotals(
-				schedules,
+				activeSchedules,
 				accounts,
 				externalParties,
 				startDate,
 				visibleAccountIds,
 			),
 			cumulative: computeHorizonCashFlowTotals(
-				schedules,
+				activeSchedules,
 				accounts,
 				externalParties,
 				startDate,

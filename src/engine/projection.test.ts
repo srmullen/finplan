@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { project } from "./projection";
+import { project, resolveSchedules } from "./projection";
 import type { Account, ProjectionInput, Schedule } from "./types";
 
 const checking: Account = {
@@ -693,5 +693,98 @@ describe("project — Scenario overrides", () => {
 		);
 		expect(result.new).toBeDefined();
 		expect(result.new![0]!.balance).toBe(500);
+	});
+});
+
+describe("resolveSchedules — Active state", () => {
+	const activeSchedule: Schedule = {
+		id: "s1",
+		sourceId: "external",
+		destinationId: "checking",
+		amount: 500,
+		estimated: false,
+		frequency: "monthly",
+		startDate: "2024-01-01",
+		terminateAtZero: false,
+	};
+	const inactiveSchedule: Schedule = { ...activeSchedule, id: "s2", active: false };
+
+	it("includes a Schedule with no active field (defaults to active)", () => {
+		expect(resolveSchedules([activeSchedule], undefined)).toEqual([
+			activeSchedule,
+		]);
+	});
+
+	it("excludes an inactive Schedule from the Baseline (no scenario)", () => {
+		expect(resolveSchedules([activeSchedule, inactiveSchedule], undefined)).toEqual([
+			activeSchedule,
+		]);
+	});
+
+	it("excludes an inactive Schedule from a Scenario projection too", () => {
+		const resolved = resolveSchedules([activeSchedule, inactiveSchedule], {
+			id: "sc1",
+			name: "Scenario",
+			scheduleOverrides: [],
+			additionalSchedules: [],
+			additionalAccounts: [],
+		});
+		expect(resolved.map((s) => s.id)).toEqual(["s1"]);
+	});
+
+	it("a scenario paused:false override cannot reactivate a Baseline-inactive Schedule", () => {
+		const resolved = resolveSchedules([activeSchedule, inactiveSchedule], {
+			id: "sc1",
+			name: "Scenario",
+			scheduleOverrides: [{ scheduleId: "s2", paused: false }],
+			additionalSchedules: [],
+			additionalAccounts: [],
+		});
+		expect(resolved.map((s) => s.id)).toEqual(["s1"]);
+	});
+});
+
+describe("project — Active state", () => {
+	it("an inactive Schedule contributes nothing to the Baseline Projection", () => {
+		const schedule: Schedule = {
+			id: "s1",
+			sourceId: "external",
+			destinationId: "checking",
+			amount: 500,
+			estimated: false,
+			frequency: "monthly",
+			startDate: "2024-01-01",
+			terminateAtZero: false,
+			active: false,
+		};
+		const result = project(makeInput({ schedules: [schedule] }));
+		expect(result.checking!.at(-1)!.balance).toBe(1000);
+	});
+
+	it("an inactive Schedule contributes nothing to a Scenario projection, even with a paused:false override", () => {
+		const schedule: Schedule = {
+			id: "s1",
+			sourceId: "external",
+			destinationId: "checking",
+			amount: 500,
+			estimated: false,
+			frequency: "monthly",
+			startDate: "2024-01-01",
+			terminateAtZero: false,
+			active: false,
+		};
+		const result = project(
+			makeInput({
+				schedules: [schedule],
+				scenario: {
+					id: "sc1",
+					name: "Try to reactivate",
+					scheduleOverrides: [{ scheduleId: "s1", paused: false }],
+					additionalSchedules: [],
+					additionalAccounts: [],
+				},
+			}),
+		);
+		expect(result.checking!.at(-1)!.balance).toBe(1000);
 	});
 });

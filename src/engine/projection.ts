@@ -86,11 +86,12 @@ export function resolveSchedules(
 	baseSchedules: Schedule[],
 	scenario: Scenario | undefined,
 ): Schedule[] {
-	if (!scenario) return baseSchedules;
+	const activeBase = baseSchedules.filter((s) => s.active !== false);
+	if (!scenario) return activeBase;
 
 	const { scheduleOverrides, additionalSchedules } = scenario;
 
-	const resolved = baseSchedules
+	const resolved = activeBase
 		.filter((s) => {
 			const ov = scheduleOverrides.find((o) => o.scheduleId === s.id);
 			return !ov?.paused;

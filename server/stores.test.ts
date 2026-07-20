@@ -219,6 +219,28 @@ describe("schedules store", () => {
 		stores.schedules.create(schedule);
 		expect(stores.schedules.list()[0]?.groupId).toBeUndefined();
 	});
+
+	it("defaults to active (omits the field) when not specified on create", () => {
+		stores.schedules.create(schedule);
+		expect(stores.schedules.list()[0]?.active).toBeUndefined();
+	});
+
+	it("persists active: false on create", () => {
+		stores.schedules.create({ ...schedule, active: false });
+		expect(stores.schedules.get("s1")?.active).toBe(false);
+	});
+
+	it("persists active: false on update", () => {
+		stores.schedules.create(schedule);
+		stores.schedules.update({ ...schedule, active: false });
+		expect(stores.schedules.get("s1")?.active).toBe(false);
+	});
+
+	it("reactivating (active: true) omits the field again, since true is the default", () => {
+		stores.schedules.create({ ...schedule, active: false });
+		stores.schedules.update({ ...schedule, active: true });
+		expect(stores.schedules.get("s1")?.active).toBeUndefined();
+	});
 });
 
 describe("schedule groups store", () => {

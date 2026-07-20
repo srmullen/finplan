@@ -1,6 +1,7 @@
 import { Fragment, useState } from "react";
 import ScheduleForm from "../components/ScheduleForm";
 import ScheduleGroupForm from "../components/ScheduleGroupForm";
+import { resolveSchedules } from "../engine/projection";
 import type { Schedule, ScheduleGroupWithMembers } from "../engine/types";
 import { useAccounts } from "../hooks/useAccounts";
 import { useExternalParties } from "../hooks/useExternalParties";
@@ -29,6 +30,7 @@ export default function SchedulesView() {
 	const [editing, setEditing] = useState<Schedule | null>(null);
 	const [editingGroup, setEditingGroup] =
 		useState<ScheduleGroupWithMembers | null>(null);
+	const [showInactive, setShowInactive] = useState(false);
 
 	const nodeLabel = (id: string) => {
 		const account = accounts.find((a) => a.id === id);
@@ -65,6 +67,10 @@ export default function SchedulesView() {
 		}
 	}
 
+	function handleToggleActive(s: Schedule) {
+		void updateSchedule({ ...s, active: s.active === false ? true : false });
+	}
+
 	async function handleDeleteGroup(id: string) {
 		if (!confirm("Delete this payment group and all its member schedules?")) {
 			return;
@@ -78,22 +84,28 @@ export default function SchedulesView() {
 
 	const today = new Date().toISOString().slice(0, 10);
 	const { totalIn, totalOut } = computeCashFlowTotals(
-		schedules,
+		resolveSchedules(schedules, undefined),
 		accounts,
 		externalParties,
 		today,
 	);
 
+	const visibleSchedules = showInactive
+		? schedules
+		: schedules.filter((s) => s.active !== false);
+
 	const groups = scheduleGroups
 		.map((group) => ({
 			group,
-			members: schedules.filter((s) => s.groupId === group.id),
+			members: visibleSchedules.filter((s) => s.groupId === group.id),
 		}))
 		.filter(({ members }) => members.length > 0);
 	const groupedIds = new Set(
 		groups.flatMap(({ members }) => members.map((s) => s.id)),
 	);
-	const ungroupedSchedules = schedules.filter((s) => !groupedIds.has(s.id));
+	const ungroupedSchedules = visibleSchedules.filter(
+		(s) => !groupedIds.has(s.id),
+	);
 
 	const renderScheduleRow = (s: Schedule, indented: boolean) => {
 		const direction = classifyScheduleDirection(s, accounts, externalParties);
@@ -103,8 +115,14 @@ export default function SchedulesView() {
 				: direction === "out"
 					? styles.stripeOut
 					: styles.stripeNeither;
+		const isInactive = s.active === false;
 		return (
-			<tr key={s.id} style={stripeStyle}>
+			<tr
+				key={s.id}
+				style={
+					isInactive ? { ...stripeStyle, ...styles.inactiveRow } : stripeStyle
+				}
+			>
 				<td style={indented ? styles.indentedCell : undefined}>
 					{nodeLabel(s.sourceId)}
 				</td>
@@ -117,6 +135,13 @@ export default function SchedulesView() {
 				<td>{formatDate(s.startDate)}</td>
 				<td>{s.endDate ? formatDate(s.endDate) : "—"}</td>
 				<td style={styles.actions}>
+					<button
+						type="button"
+						style={styles.editBtn}
+						onClick={() => handleToggleActive(s)}
+					>
+						{isInactive ? "Activate" : "Deactivate"}
+					</button>
 					<button
 						type="button"
 						style={styles.editBtn}
@@ -235,53 +260,65 @@ export default function SchedulesView() {
 			{schedules.length === 0 ? (
 				<p style={styles.empty}>No schedules yet.</p>
 			) : (
-				<table className="data-table">
-					<thead>
-						<tr>
-							<th>From</th>
-							<th>Amount</th>
-							<th>Frequency</th>
-							<th>To</th>
-							<th>Start</th>
-							<th>End</th>
-							<th />
-						</tr>
-					</thead>
-					<tbody>
-						{groups.map(({ group, members }) => (
-							<Fragment key={group.id}>
-								<tr>
-									<td colSpan={6} style={styles.groupHeaderCell}>
-										{group.name}
-									</td>
-									<td style={{ ...styles.actions, ...styles.groupHeaderCell }}>
-										<button
-											type="button"
-											style={styles.editBtn}
-											onClick={() => {
-												setShowForm(false);
-												setEditing(null);
-												setShowGroupForm(false);
-												setEditingGroup({ group, schedules: members });
-											}}
+				<>
+					<label style={styles.showInactiveLabel}>
+						<input
+							type="checkbox"
+							checked={showInactive}
+							onChange={() => setShowInactive((v) => !v)}
+						/>
+						Show inactive
+					</label>
+					<table className="data-table">
+						<thead>
+							<tr>
+								<th>From</th>
+								<th>Amount</th>
+								<th>Frequency</th>
+								<th>To</th>
+								<th>Start</th>
+								<th>End</th>
+								<th />
+							</tr>
+						</thead>
+						<tbody>
+							{groups.map(({ group, members }) => (
+								<Fragment key={group.id}>
+									<tr>
+										<td colSpan={6} style={styles.groupHeaderCell}>
+											{group.name}
+										</td>
+										<td
+											style={{ ...styles.actions, ...styles.groupHeaderCell }}
 										>
-											Edit
-										</button>
-										<button
-											type="button"
-											style={styles.deleteBtn}
-											onClick={() => void handleDeleteGroup(group.id)}
-										>
-											Delete
-										</button>
-									</td>
-								</tr>
-								{members.map((s) => renderScheduleRow(s, true))}
-							</Fragment>
-						))}
-						{ungroupedSchedules.map((s) => renderScheduleRow(s, false))}
-					</tbody>
-				</table>
+											<button
+												type="button"
+												style={styles.editBtn}
+												onClick={() => {
+													setShowForm(false);
+													setEditing(null);
+													setShowGroupForm(false);
+													setEditingGroup({ group, schedules: members });
+												}}
+											>
+												Edit
+											</button>
+											<button
+												type="button"
+												style={styles.deleteBtn}
+												onClick={() => void handleDeleteGroup(group.id)}
+											>
+												Delete
+											</button>
+										</td>
+									</tr>
+									{members.map((s) => renderScheduleRow(s, true))}
+								</Fragment>
+							))}
+							{ungroupedSchedules.map((s) => renderScheduleRow(s, false))}
+						</tbody>
+					</table>
+				</>
 			)}
 		</div>
 	);
@@ -293,6 +330,15 @@ const styles = {
 		gap: "1rem",
 		marginBottom: "1.5rem",
 	},
+	showInactiveLabel: {
+		display: "flex",
+		alignItems: "center",
+		gap: "0.4rem",
+		marginBottom: "0.75rem",
+		fontSize: "0.85rem",
+		cursor: "pointer",
+	},
+	inactiveRow: { opacity: 0.45 },
 	totalCard: {
 		display: "flex",
 		flexDirection: "column" as const,

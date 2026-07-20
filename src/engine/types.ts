@@ -47,6 +47,7 @@ export interface Schedule {
 	endDate?: string; // ISO date YYYY-MM-DD
 	terminateAtZero: boolean; // only meaningful when destination is an amortizing Account
 	groupId?: string; // ScheduleGroup.id, when this Schedule is a member of a Payment Group
+	active?: boolean; // defaults to true; false excludes this Schedule from every calculation (Baseline and every Scenario)
 }
 
 export interface ScheduleGroup {

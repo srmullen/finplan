@@ -41,10 +41,12 @@ function sampleMonthly(series: { date: string; balance: number }[]) {
 export default function AccountDetailView() {
 	const { id } = useParams<{ id: string }>();
 	const { accounts } = useAccounts();
-	const { schedules, addSchedule, deleteSchedule } = useSchedules();
+	const { schedules, addSchedule, updateSchedule, deleteSchedule } =
+		useSchedules();
 	const { externalParties } = useExternalParties();
 
 	const [showScheduleForm, setShowScheduleForm] = useState(false);
+	const [showInactive, setShowInactive] = useState(false);
 	const [projection, setProjection] = useState<
 		{ date: string; balance: number }[]
 	>([]);
@@ -55,6 +57,9 @@ export default function AccountDetailView() {
 	const accountSchedules = schedules.filter(
 		(s) => s.sourceId === id || s.destinationId === id,
 	);
+	const visibleAccountSchedules = showInactive
+		? accountSchedules
+		: accountSchedules.filter((s) => s.active !== false);
 
 	const today = new Date();
 	const startDate = today.toISOString().slice(0, 10);
@@ -99,6 +104,10 @@ export default function AccountDetailView() {
 		if (confirm("Delete this schedule?")) {
 			void deleteSchedule(scheduleId);
 		}
+	}
+
+	function handleToggleActive(s: Schedule) {
+		void updateSchedule({ ...s, active: s.active === false ? true : false });
 	}
 
 	const yAxisTickFormatter = (v: unknown) => formatCurrency(Number(v));
@@ -237,41 +246,61 @@ export default function AccountDetailView() {
 				{accountSchedules.length === 0 ? (
 					<p style={styles.empty}>No schedules involve this account.</p>
 				) : (
-					<table className="data-table">
-						<thead>
-							<tr>
-								<th>From</th>
-								<th>Amount</th>
-								<th>Frequency</th>
-								<th>To</th>
-								<th>Start</th>
-								<th />
-							</tr>
-						</thead>
-						<tbody>
-							{accountSchedules.map((s) => (
-								<tr key={s.id}>
-									<td>{nodeLabel(s.sourceId)}</td>
-									<td style={{ fontVariantNumeric: "tabular-nums" }}>
-										${s.amount.toLocaleString()}
-										{s.estimated ? " ~" : ""}
-									</td>
-									<td>{s.frequency}</td>
-									<td>{nodeLabel(s.destinationId)}</td>
-									<td>{formatDate(s.startDate)}</td>
-									<td style={styles.actions}>
-										<button
-											type="button"
-											style={styles.deleteBtn}
-											onClick={() => handleDeleteSchedule(s.id)}
-										>
-											Delete
-										</button>
-									</td>
+					<>
+						<label style={styles.showInactiveLabel}>
+							<input
+								type="checkbox"
+								checked={showInactive}
+								onChange={() => setShowInactive((v) => !v)}
+							/>
+							Show inactive
+						</label>
+						<table className="data-table">
+							<thead>
+								<tr>
+									<th>From</th>
+									<th>Amount</th>
+									<th>Frequency</th>
+									<th>To</th>
+									<th>Start</th>
+									<th />
 								</tr>
-							))}
-						</tbody>
-					</table>
+							</thead>
+							<tbody>
+								{visibleAccountSchedules.map((s) => (
+									<tr
+										key={s.id}
+										style={s.active === false ? styles.inactiveRow : undefined}
+									>
+										<td>{nodeLabel(s.sourceId)}</td>
+										<td style={{ fontVariantNumeric: "tabular-nums" }}>
+											${s.amount.toLocaleString()}
+											{s.estimated ? " ~" : ""}
+										</td>
+										<td>{s.frequency}</td>
+										<td>{nodeLabel(s.destinationId)}</td>
+										<td>{formatDate(s.startDate)}</td>
+										<td style={styles.actions}>
+											<button
+												type="button"
+												style={styles.editBtn}
+												onClick={() => handleToggleActive(s)}
+											>
+												{s.active === false ? "Activate" : "Deactivate"}
+											</button>
+											<button
+												type="button"
+												style={styles.deleteBtn}
+												onClick={() => handleDeleteSchedule(s.id)}
+											>
+												Delete
+											</button>
+										</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</>
 				)}
 			</section>
 
@@ -351,6 +380,24 @@ const styles = {
 	},
 	actions: {
 		textAlign: "right" as const,
+	},
+	showInactiveLabel: {
+		display: "flex",
+		alignItems: "center",
+		gap: "0.4rem",
+		marginBottom: "0.75rem",
+		fontSize: "0.85rem",
+		cursor: "pointer",
+	},
+	inactiveRow: { opacity: 0.45 },
+	editBtn: {
+		padding: "0.2rem 0.5rem",
+		border: "1px solid #d1d5db",
+		borderRadius: "3px",
+		background: "#fff",
+		cursor: "pointer",
+		fontSize: "0.8rem",
+		marginRight: "0.25rem",
 	},
 	deleteBtn: {
 		padding: "0.2rem 0.5rem",
