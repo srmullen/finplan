@@ -2,14 +2,28 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import AccountForm from "../components/AccountForm";
 import ExternalPartyForm from "../components/ExternalPartyForm";
+import { resolveSchedules } from "../engine/projection";
 import type { Account, ExternalParty } from "../engine/types";
 import { useAccounts } from "../hooks/useAccounts";
 import { useAdjustments } from "../hooks/useAdjustments";
 import { useExternalParties } from "../hooks/useExternalParties";
+import { useSchedules } from "../hooks/useSchedules";
+import {
+	type AccountCashFlow,
+	computeAccountCashFlows,
+} from "../utils/cashFlow";
 import { displayBalance } from "../utils/displayBalance";
 import { formatDate } from "../utils/formatDate";
 import { computeNetWorth } from "../utils/netWorth";
 import { resolveEffectiveBalance } from "../utils/resolveEffectiveBalance";
+
+function getCashFlow(
+	cashFlows: Map<string, AccountCashFlow>,
+	accountId: string,
+): AccountCashFlow {
+	// biome-ignore lint/style/noNonNullAssertion: accountId always comes from the same accounts list the map was built from
+	return cashFlows.get(accountId)!;
+}
 
 function today(): string {
 	return new Date().toISOString().slice(0, 10);
@@ -23,9 +37,31 @@ function formatBalance(n: number) {
 	}).format(n);
 }
 
+function CashFlowCell({ cashFlow }: { cashFlow: AccountCashFlow }) {
+	return (
+		<span style={styles.cashFlowCell}>
+			<span style={styles.cashFlowIn}>
+				+{formatBalance(cashFlow.accountIn)}/mo
+			</span>
+			<span style={styles.cashFlowOut}>
+				-{formatBalance(cashFlow.accountOut)}/mo
+			</span>
+			<span
+				style={{
+					...styles.cashFlowRemaining,
+					color: cashFlow.remaining < 0 ? "#dc2626" : "#16a34a",
+				}}
+			>
+				= {formatBalance(cashFlow.remaining)}/mo
+			</span>
+		</span>
+	);
+}
+
 export default function AccountsView() {
 	const { accounts, addAccount, updateAccount, deleteAccount } = useAccounts();
 	const { adjustments } = useAdjustments();
+	const { schedules } = useSchedules();
 	const { externalParties, addParty, updateParty, deleteParty } =
 		useExternalParties();
 	const [showAccountForm, setShowAccountForm] = useState(false);
@@ -88,6 +124,23 @@ export default function AccountsView() {
 		return effectiveBalances.get(id)!.balance;
 	});
 
+	const cashFlows = computeAccountCashFlows(
+		resolveSchedules(schedules, undefined),
+		accounts,
+		asOfDate,
+	);
+	const cashFlowTotal = accounts.reduce(
+		(acc, a) => {
+			const cf = getCashFlow(cashFlows, a.id);
+			return {
+				accountIn: acc.accountIn + cf.accountIn,
+				accountOut: acc.accountOut + cf.accountOut,
+				remaining: acc.remaining + cf.remaining,
+			};
+		},
+		{ accountIn: 0, accountOut: 0, remaining: 0 },
+	);
+
 	return (
 		<div>
 			<h1>Accounts</h1>
@@ -138,6 +191,7 @@ export default function AccountsView() {
 							<th>Institution</th>
 							<th>Type</th>
 							<th style={{ textAlign: "right" }}>Balance</th>
+							<th style={{ textAlign: "right" }}>Cash Flow</th>
 							<th>As of</th>
 							<th>Rate</th>
 							<th>Kind</th>
@@ -178,6 +232,9 @@ export default function AccountsView() {
 											{formatBalance(displayBalance(a, effective.balance))}
 										</span>
 									</td>
+									<td style={{ textAlign: "right" }}>
+										<CashFlowCell cashFlow={getCashFlow(cashFlows, a.id)} />
+									</td>
 									<td>{formatDate(effective.date)}</td>
 									<td>
 										{a.rate !== 0 ? `${(a.rate * 100).toFixed(1)}%` : "—"}
@@ -205,6 +262,18 @@ export default function AccountsView() {
 								</tr>
 							);
 						})}
+						<tr>
+							<td colSpan={5} style={styles.totalLabelCell}>
+								Total
+							</td>
+							<td style={{ textAlign: "right" }}>
+								<CashFlowCell cashFlow={cashFlowTotal} />
+							</td>
+							<td />
+							<td />
+							<td />
+							<td />
+						</tr>
 					</tbody>
 				</table>
 			)}
@@ -331,4 +400,19 @@ const styles = {
 	empty: { color: "#9ca3af", marginBottom: "1.5rem" },
 	nameLink: { color: "#1d4ed8", textDecoration: "none" },
 	divider: { margin: "2rem 0", borderColor: "#e5e7eb" },
+	cashFlowCell: {
+		display: "inline-flex",
+		gap: "0.5rem",
+		fontSize: "0.8rem",
+		fontVariantNumeric: "tabular-nums" as const,
+		whiteSpace: "nowrap" as const,
+	},
+	cashFlowIn: { color: "#16a34a" },
+	cashFlowOut: { color: "#dc2626" },
+	cashFlowRemaining: { fontWeight: 600 },
+	totalLabelCell: {
+		textAlign: "right" as const,
+		fontWeight: 600,
+		color: "#374151",
+	},
 };

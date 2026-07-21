@@ -126,6 +126,22 @@ export default function DocsView() {
 					account, falling back to its original starting balance and date if you
 					haven't recorded one yet.
 				</DocsBlock>
+				<DocsBlock label="Account In / Account Out / Remaining">
+					Each row in the account list shows that account's own In, Out, and
+					Remaining for the current month — In is every active schedule paying
+					into that account, Out is every active schedule paying out of it, and
+					Remaining is In minus Out. Unlike Total In/Total Out on the Schedules
+					page, it doesn't matter what's on the other end of the schedule: a
+					transfer to another one of your own accounts still counts as Out for
+					the paying account and In for the receiving one, and a payment to a
+					loan or credit card counts as In for that debt account rather than
+					only as Out for the household. Because of that, the Total row at the
+					bottom of the list — a straight sum of every account's own figures —
+					won't always match the Schedules page's Total In/Total Out, and that
+					mismatch is expected rather than a bug. The account's own detail page
+					shows the same three figures in a larger card. Inactive schedules are
+					excluded, same as everywhere else.
+				</DocsBlock>
 				<DocsBlock label="Negative balance warning">
 					On an account's detail page, a revolving account (checking, savings,
 					credit card — anything that doesn't pay down to zero) shows a warning

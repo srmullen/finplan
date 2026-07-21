@@ -190,6 +190,49 @@ describe("AccountDetailView — account header", () => {
 	});
 });
 
+describe("AccountDetailView — Account In/Out/Remaining", () => {
+	it("shows Account In for a schedule whose destination is this account", async () => {
+		setupMocks([account], [schedule]);
+		renderAt("acc-1");
+		await act(async () => {});
+		expect(screen.getByTestId("account-in").textContent).toBe("$3,000/mo");
+		expect(screen.getByTestId("account-out").textContent).toBe("$0/mo");
+		expect(screen.getByTestId("account-remaining").textContent).toBe(
+			"$3,000/mo",
+		);
+	});
+
+	it("shows Account Out for a schedule whose source is this account, classified regardless of the other endpoint (ADR-0025)", async () => {
+		const debtPayment: Schedule = {
+			...schedule,
+			sourceId: "acc-1",
+			destinationId: "acc-2",
+		};
+		setupMocks(
+			[account, { ...account, id: "acc-2", type: "credit_card" }],
+			[debtPayment],
+		);
+		renderAt("acc-1");
+		await act(async () => {});
+		expect(screen.getByTestId("account-in").textContent).toBe("$0/mo");
+		expect(screen.getByTestId("account-out").textContent).toBe("$3,000/mo");
+		expect(screen.getByTestId("account-remaining").textContent).toBe(
+			"-$3,000/mo",
+		);
+	});
+
+	it("excludes an inactive schedule from Account In/Out (ADR-0026)", async () => {
+		setupMocks([account], [{ ...schedule, active: false }]);
+		renderAt("acc-1");
+		await act(async () => {});
+		expect(screen.getByTestId("account-in").textContent).toBe("$0/mo");
+		expect(screen.getByTestId("account-out").textContent).toBe("$0/mo");
+		expect(screen.getByTestId("account-remaining").textContent).toBe(
+			"$0/mo",
+		);
+	});
+});
+
 describe("AccountDetailView — schedules panel", () => {
 	it("shows empty message when no schedules involve this account", async () => {
 		renderAt("acc-1");

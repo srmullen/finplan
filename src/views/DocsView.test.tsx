@@ -40,4 +40,11 @@ describe("DocsView", () => {
 		render(<DocsView />);
 		expect(screen.getByText("Active / inactive")).toBeTruthy();
 	});
+
+	it("documents Account In / Account Out / Remaining", () => {
+		render(<DocsView />);
+		expect(
+			screen.getByText("Account In / Account Out / Remaining"),
+		).toBeTruthy();
+	});
 });

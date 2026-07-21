@@ -2,6 +2,7 @@ import { expect, it } from "vitest";
 import type { Account, ExternalParty, Schedule } from "../engine/types";
 import {
 	classifyScheduleDirection,
+	computeAccountCashFlows,
 	computeCashFlowTotals,
 	computeHorizonCashFlowTotals,
 	isFlowVisible,
@@ -541,4 +542,105 @@ it("returns zero totals for an empty schedule list over a horizon", () => {
 			"2026-12-31",
 		),
 	).toEqual({ totalIn: 0, totalOut: 0 });
+});
+
+// --- computeAccountCashFlows ---
+
+it("counts a schedule as Account In for its destination account", () => {
+	const income: Schedule = {
+		...base,
+		sourceId: "party-employer",
+		destinationId: "acc-checking",
+		amount: 1000,
+	};
+	const totals = computeAccountCashFlows([income], accounts, today);
+	expect(totals.get("acc-checking")).toEqual({
+		accountIn: 1000,
+		accountOut: 0,
+		remaining: 1000,
+	});
+});
+
+it("counts a schedule as Account Out for its source account", () => {
+	const totals = computeAccountCashFlows([base], accounts, today);
+	expect(totals.get("acc-checking")).toEqual({
+		accountIn: 0,
+		accountOut: 100,
+		remaining: -100,
+	});
+});
+
+it("counts a transfer between two tracked accounts as In for the destination and Out for the source, diverging from classifyScheduleDirection's neither (ADR-0025)", () => {
+	const totals = computeAccountCashFlows([base], accounts, today);
+	expect(totals.get("acc-savings")).toEqual({
+		accountIn: 100,
+		accountOut: 0,
+		remaining: 100,
+	});
+});
+
+it("counts a payment into a debt account as Out for the paying account and In for the debt account, diverging from Total Out's household-level rule (ADR-0025)", () => {
+	const debtPayment: Schedule = { ...base, destinationId: "acc-cc" };
+	const totals = computeAccountCashFlows([debtPayment], accounts, today);
+	expect(totals.get("acc-checking")).toEqual({
+		accountIn: 0,
+		accountOut: 100,
+		remaining: -100,
+	});
+	expect(totals.get("acc-cc")).toEqual({
+		accountIn: 100,
+		accountOut: 0,
+		remaining: 100,
+	});
+});
+
+it("returns zero totals for an account with no schedules touching it", () => {
+	const totals = computeAccountCashFlows([base], accounts, today);
+	expect(totals.get("acc-cc")).toEqual({
+		accountIn: 0,
+		accountOut: 0,
+		remaining: 0,
+	});
+	expect(totals.get("acc-loan")).toEqual({
+		accountIn: 0,
+		accountOut: 0,
+		remaining: 0,
+	});
+});
+
+it("sums multiple schedules touching the same account", () => {
+	const income: Schedule = {
+		...base,
+		sourceId: "party-employer",
+		destinationId: "acc-checking",
+		amount: 1000,
+	};
+	const totals = computeAccountCashFlows([income, base], accounts, today);
+	expect(totals.get("acc-checking")).toEqual({
+		accountIn: 1000,
+		accountOut: 100,
+		remaining: 900,
+	});
+});
+
+it("excludes a schedule that hasn't started yet this month, reusing the ADR-0020 eligibility rule", () => {
+	const future: Schedule = { ...base, startDate: "2026-08-01" };
+	const totals = computeAccountCashFlows([future], accounts, today);
+	expect(totals.get("acc-checking")).toEqual({
+		accountIn: 0,
+		accountOut: 0,
+		remaining: 0,
+	});
+});
+
+it("applies the same monthly-equivalent smoothing as Total In/Total Out", () => {
+	const weekly: Schedule = {
+		...base,
+		frequency: "weekly",
+		amount: 100,
+		sourceId: "party-employer",
+		destinationId: "acc-checking",
+	};
+	const totals = computeAccountCashFlows([weekly], accounts, today);
+	expect(totals.get("acc-checking")?.accountIn).toBeCloseTo(100 * (52 / 12));
 });

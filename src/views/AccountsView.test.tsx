@@ -8,15 +8,22 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
-import type { Account, Adjustment, ExternalParty } from "../engine/types";
+import type {
+	Account,
+	Adjustment,
+	ExternalParty,
+	Schedule,
+} from "../engine/types";
 
 vi.mock("@src/hooks/useAccounts");
 vi.mock("@src/hooks/useAdjustments");
 vi.mock("@src/hooks/useExternalParties");
+vi.mock("@src/hooks/useSchedules");
 
 import { useAccounts } from "@src/hooks/useAccounts";
 import { useAdjustments } from "@src/hooks/useAdjustments";
 import { useExternalParties } from "@src/hooks/useExternalParties";
+import { useSchedules } from "@src/hooks/useSchedules";
 import AccountsView from "./AccountsView";
 
 function renderView() {
@@ -62,6 +69,7 @@ function setupMocks(
 	accounts: Account[] = [],
 	parties: ExternalParty[] = [],
 	adjustments: Adjustment[] = [],
+	schedules: Schedule[] = [],
 ) {
 	vi.mocked(useAccounts).mockReturnValue({
 		accounts,
@@ -84,6 +92,14 @@ function setupMocks(
 		deleteParty: mockDeleteParty,
 		error: null,
 	} as ReturnType<typeof useExternalParties>);
+	vi.mocked(useSchedules).mockReturnValue({
+		schedules,
+		addSchedule: vi.fn(),
+		updateSchedule: vi.fn(),
+		deleteSchedule: vi.fn(),
+		refresh: vi.fn(),
+		error: null,
+	} as ReturnType<typeof useSchedules>);
 }
 
 beforeEach(() => {
@@ -305,6 +321,100 @@ describe("AccountsView — Net Worth", () => {
 		renderView();
 		// 1000 + (-20000) = -19000, not 1000 + 20000
 		expect(screen.getByText("-$19,000")).toBeTruthy();
+	});
+});
+
+describe("AccountsView — Account In/Out/Remaining", () => {
+	it("shows Account In/Out/Remaining per row, classified by literal source/destination (ADR-0025)", () => {
+		const savings: Account = {
+			...account,
+			id: "acc-savings",
+			name: "Savings",
+			type: "savings",
+		};
+		const transfer: Schedule = {
+			id: "s-1",
+			sourceId: "acc-1",
+			destinationId: "acc-savings",
+			amount: 200,
+			estimated: false,
+			frequency: "monthly",
+			startDate: "2020-01-01",
+			terminateAtZero: false,
+		};
+		setupMocks([account, savings], [], [], [transfer]);
+		renderView();
+
+		// Checking (source): Out $200, Remaining -$200. Savings (destination):
+		// In $200, Remaining $200. Total In/Out both $200 (net zero remaining).
+		expect(screen.getAllByText("-$200/mo")).toHaveLength(2); // Checking's Out + Total Out
+		expect(screen.getAllByText("+$200/mo")).toHaveLength(2); // Savings' In + Total In
+		expect(screen.getByText("= -$200/mo")).toBeTruthy();
+		expect(screen.getByText("= $200/mo")).toBeTruthy();
+		expect(screen.getByText("= $0/mo")).toBeTruthy(); // Total row: In and Out net to zero
+	});
+
+	it("excludes an inactive schedule from Account In/Out (ADR-0026)", () => {
+		const savings: Account = {
+			...account,
+			id: "acc-savings",
+			name: "Savings",
+			type: "savings",
+		};
+		const inactiveTransfer: Schedule = {
+			id: "s-1",
+			sourceId: "acc-1",
+			destinationId: "acc-savings",
+			amount: 200,
+			estimated: false,
+			frequency: "monthly",
+			startDate: "2020-01-01",
+			terminateAtZero: false,
+			active: false,
+		};
+		setupMocks([account, savings], [], [], [inactiveTransfer]);
+		renderView();
+
+		expect(screen.getAllByText("+$0/mo")).toHaveLength(3); // Checking + Savings + Total
+	});
+
+	it("sums per-account figures into a Total row", () => {
+		const savings: Account = {
+			...account,
+			id: "acc-savings",
+			name: "Savings",
+			type: "savings",
+		};
+		const income: Schedule = {
+			id: "s-1",
+			sourceId: "party-1",
+			destinationId: "acc-1",
+			amount: 1000,
+			estimated: false,
+			frequency: "monthly",
+			startDate: "2020-01-01",
+			terminateAtZero: false,
+		};
+		const transfer: Schedule = {
+			id: "s-2",
+			sourceId: "acc-1",
+			destinationId: "acc-savings",
+			amount: 200,
+			estimated: false,
+			frequency: "monthly",
+			startDate: "2020-01-01",
+			terminateAtZero: false,
+		};
+		setupMocks([account, savings], [party], [], [income, transfer]);
+		renderView();
+
+		expect(screen.getByText("Total")).toBeTruthy();
+		// Total In: 1000 (income) + 200 (transfer into Savings) = 1200
+		expect(screen.getByText("+$1,200/mo")).toBeTruthy();
+		// Total Out: 200 (transfer out of Checking) — same $200 as Checking's own Out cell
+		expect(screen.getAllByText("-$200/mo")).toHaveLength(2);
+		// Total Remaining: 1200 - 200 = 1000
+		expect(screen.getByText("= $1,000/mo")).toBeTruthy();
 	});
 });
 

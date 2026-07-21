@@ -8,6 +8,12 @@ export interface CashFlowTotals {
 	totalOut: number;
 }
 
+export interface AccountCashFlow {
+	accountIn: number;
+	accountOut: number;
+	remaining: number;
+}
+
 const MONTHLY_MULTIPLIER: Record<
 	Exclude<Schedule["frequency"], "once">,
 	number
@@ -127,6 +133,40 @@ export function computeCashFlowTotals(
 	}
 
 	return { totalIn, totalOut };
+}
+
+/**
+ * Per-Account counterpart to computeCashFlowTotals (ADR-0025): classifies a
+ * Schedule relative to each Account by literal source/destination match,
+ * regardless of node type on the other end. Callers should pre-filter
+ * inactive Schedules (e.g. via resolveSchedules), matching the convention
+ * used by computeCashFlowTotals.
+ */
+export function computeAccountCashFlows(
+	schedules: Schedule[],
+	accounts: Account[],
+	today: string,
+): Map<string, AccountCashFlow> {
+	const totals = new Map<string, AccountCashFlow>(
+		accounts.map((a) => [a.id, { accountIn: 0, accountOut: 0, remaining: 0 }]),
+	);
+
+	for (const schedule of schedules) {
+		if (!isActiveThisMonth(schedule, today)) continue;
+		const amount = monthlyEquivalentAmount(schedule, today);
+
+		const destTotals = totals.get(schedule.destinationId);
+		if (destTotals) destTotals.accountIn += amount;
+
+		const sourceTotals = totals.get(schedule.sourceId);
+		if (sourceTotals) sourceTotals.accountOut += amount;
+	}
+
+	for (const t of totals.values()) {
+		t.remaining = t.accountIn - t.accountOut;
+	}
+
+	return totals;
 }
 
 export function computeHorizonCashFlowTotals(

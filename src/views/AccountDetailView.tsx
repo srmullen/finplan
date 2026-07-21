@@ -13,10 +13,12 @@ import {
 import { get } from "../api/client";
 import AdjustmentPanel from "../components/AdjustmentPanel";
 import ScheduleForm from "../components/ScheduleForm";
+import { resolveSchedules } from "../engine/projection";
 import type { ProjectionResult, Schedule } from "../engine/types";
 import { useAccounts } from "../hooks/useAccounts";
 import { useExternalParties } from "../hooks/useExternalParties";
 import { useSchedules } from "../hooks/useSchedules";
+import { computeAccountCashFlows } from "../utils/cashFlow";
 import { displayBalance } from "../utils/displayBalance";
 import { formatDate } from "../utils/formatDate";
 
@@ -137,6 +139,13 @@ export default function AccountDetailView() {
 	const goesNegative =
 		!account.amortizing && projection.some((p) => p.balance < 0);
 
+	// biome-ignore lint/style/noNonNullAssertion: account.id is the only key in the map, since it's the only account passed in
+	const accountCashFlow = computeAccountCashFlows(
+		resolveSchedules(schedules, undefined),
+		[account],
+		startDate,
+	).get(account.id)!;
+
 	return (
 		<div>
 			<Link to="/accounts" style={styles.backLink}>
@@ -178,6 +187,39 @@ export default function AccountDetailView() {
 					This account is projected to go negative within the next 12 months.
 				</div>
 			)}
+
+			<div style={styles.cashFlowRow}>
+				<div style={styles.cashFlowCard}>
+					<span style={styles.cashFlowLabel}>Account In</span>
+					<span
+						data-testid="account-in"
+						style={{ ...styles.cashFlowAmount, color: "#16a34a" }}
+					>
+						{formatCurrency(accountCashFlow.accountIn)}/mo
+					</span>
+				</div>
+				<div style={styles.cashFlowCard}>
+					<span style={styles.cashFlowLabel}>Account Out</span>
+					<span
+						data-testid="account-out"
+						style={{ ...styles.cashFlowAmount, color: "#dc2626" }}
+					>
+						{formatCurrency(accountCashFlow.accountOut)}/mo
+					</span>
+				</div>
+				<div style={styles.cashFlowCard}>
+					<span style={styles.cashFlowLabel}>Remaining</span>
+					<span
+						data-testid="account-remaining"
+						style={{
+							...styles.cashFlowAmount,
+							color: accountCashFlow.remaining < 0 ? "#dc2626" : "#16a34a",
+						}}
+					>
+						{formatCurrency(accountCashFlow.remaining)}/mo
+					</span>
+				</div>
+			</div>
 
 			<section style={styles.section}>
 				<div style={styles.sectionHeader}>
@@ -355,6 +397,31 @@ const styles = {
 		fontVariantNumeric: "tabular-nums",
 	},
 	seedMeta: { color: "#6b7280", fontSize: "0.8rem", marginTop: "0.25rem" },
+	cashFlowRow: {
+		display: "flex",
+		gap: "1rem",
+		marginBottom: "1.5rem",
+	},
+	cashFlowCard: {
+		display: "flex",
+		flexDirection: "column" as const,
+		padding: "0.75rem 1rem",
+		border: "1px solid #e5e7eb",
+		borderRadius: "6px",
+		background: "#f9fafb",
+	},
+	cashFlowLabel: {
+		fontSize: "0.75rem",
+		fontWeight: 600,
+		color: "#6b7280",
+		textTransform: "uppercase" as const,
+		letterSpacing: "0.05em",
+	},
+	cashFlowAmount: {
+		fontSize: "1.25rem",
+		fontWeight: 600,
+		fontVariantNumeric: "tabular-nums" as const,
+	},
 	section: {
 		marginBottom: "2rem",
 		padding: "1.25rem",
