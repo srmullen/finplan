@@ -20,8 +20,4 @@ docker login ghcr.io -u <github-username>
 - OpenAPI Spec
 - Try ponytail
 - Integration Tests required.
-- Script for populating database
-- Warning/Error on projection page if any non-amortizing accounts hit zero. Warning on individual account page as well.
 - Sorting/filtering on tables. Default sort on 'type' column.
-- Pause schedules
-- Show Remaining per month from In/Out calculation
